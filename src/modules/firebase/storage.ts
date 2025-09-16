@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import { config } from '@fleetflow/config';
+import { config } from '../../shared-config/src';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {

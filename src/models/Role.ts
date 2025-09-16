@@ -1,5 +1,5 @@
 import { Schema, model, Document } from 'mongoose';
-import { Permission } from '@fleetflow/types';
+import { Permission } from '../shared-types/src';
 
 export interface RoleDocument extends Document {
   name: string;

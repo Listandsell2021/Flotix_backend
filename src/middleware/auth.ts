@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import type { JWTPayload, UserRole } from '@fleetflow/types';
-import { config } from '@fleetflow/config';
+import type { JWTPayload, UserRole } from '../shared-types/src';
+import { config } from '../shared-config/src';
 import { User } from '../models/User';
 
 export interface AuthRequest extends Request {

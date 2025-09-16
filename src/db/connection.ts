@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { config } from '@fleetflow/config';
+import { config } from '../shared-config/src';
 
 export const connectDB = async (): Promise<void> => {
   try {

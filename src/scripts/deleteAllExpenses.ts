@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { config } from '@fleetflow/config';
+import { config } from '../shared-config/src';
 import { Expense } from '../models';
 
 async function deleteAllExpenses() {

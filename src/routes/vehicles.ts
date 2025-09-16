@@ -19,7 +19,7 @@ import type {
   CreateVehicleRequest,
   AssignVehicleRequest,
   Vehicle as IVehicle
-} from '@fleetflow/types';
+} from '../shared-types/src';
 import { z } from 'zod';
 
 const router = Router();

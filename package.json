@@ -14,8 +14,6 @@
     "test-login": "tsx src/scripts/test-login.ts"
   },
   "dependencies": {
-    "@fleetflow/config": "workspace:*",
-    "@fleetflow/types": "workspace:*",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

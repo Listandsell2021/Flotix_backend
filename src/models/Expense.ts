@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import type { Expense as IExpense, ExpenseType, ExpenseCategory } from '@fleetflow/types';
-import { config } from '@fleetflow/config';
+import type { Expense as IExpense, ExpenseType, ExpenseCategory } from '../shared-types/src';
+import { config } from '../shared-config/src';
 
 export interface ExpenseDocument extends IExpense, Document {}
 

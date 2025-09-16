@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { Vehicle } from '../models';
-import config from '@fleetflow/config';
+import config from '../shared-config/src';
 
 async function migrateDriverAssignments() {
   try {

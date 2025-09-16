@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcrypt';
-import type { User as IUser, UserRole, UserStatus } from '@fleetflow/types';
+import type { User as IUser, UserRole, UserStatus } from '../shared-types/src';
 
 export interface UserDocument extends IUser, Document {
   comparePassword(candidatePassword: string): Promise<boolean>;

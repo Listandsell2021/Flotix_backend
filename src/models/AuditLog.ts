@@ -65,7 +65,9 @@ const auditLogSchema = new Schema<AuditLogDocument>(
           const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/;
           // IPv6 patterns (including compressed forms like ::1)
           const ipv6 = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::[0-9a-fA-F]{1,4}$|^[0-9a-fA-F]{1,4}::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$/;
-          return ipv4.test(v) || ipv6.test(v) || v === 'unknown';
+          // IPv6-mapped IPv4 addresses (::ffff:192.168.1.1)
+          const ipv6MappedIpv4 = /^::ffff:(\d{1,3}\.){3}\d{1,3}$/i;
+          return ipv4.test(v) || ipv6.test(v) || ipv6MappedIpv4.test(v) || v === 'unknown';
         },
         message: 'Invalid IP address format'
       },

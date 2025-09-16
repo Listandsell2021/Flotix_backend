@@ -216,7 +216,13 @@ router.post('/',
     });
 
     // Update vehicle odometer if kilometers or odometerReading is provided and driver has assigned vehicle
-    if (targetDriver.assignedVehicleId) {
+    if (targetDriver.assignedVehicleId && (expenseData.odometerReading || expenseData.kilometers)) {
+      console.log('Attempting to update vehicle odometer:', {
+        vehicleId: targetDriver.assignedVehicleId,
+        odometerReading: expenseData.odometerReading,
+        kilometers: expenseData.kilometers
+      });
+
       try {
         const vehicle = await Vehicle.findOne({
           _id: targetDriver.assignedVehicleId,
@@ -224,37 +230,57 @@ router.post('/',
         });
 
         if (vehicle) {
+          console.log('Vehicle found:', {
+            licensePlate: vehicle.licensePlate,
+            currentOdometer: vehicle.currentOdometer
+          });
+
           let newOdometerReading: number | undefined;
 
           // If odometerReading is provided, use it directly as the new total
-          if (expenseData.odometerReading) {
+          if (expenseData.odometerReading && expenseData.odometerReading > 0) {
             newOdometerReading = expenseData.odometerReading;
+            console.log(`Setting odometer to provided reading: ${newOdometerReading}`);
           }
           // If only kilometers is provided, add it to current odometer (treating it as distance traveled)
-          else if (expenseData.kilometers) {
+          else if (expenseData.kilometers && expenseData.kilometers > 0) {
             newOdometerReading = vehicle.currentOdometer + expenseData.kilometers;
-            console.log(`Adding ${expenseData.kilometers} km to current odometer ${vehicle.currentOdometer}`);
+            console.log(`Adding ${expenseData.kilometers} km to current odometer ${vehicle.currentOdometer}, new reading: ${newOdometerReading}`);
           }
 
-          if (newOdometerReading) {
+          if (newOdometerReading !== undefined && newOdometerReading > 0) {
             // Only update if the new reading is higher than current
             if (newOdometerReading > vehicle.currentOdometer) {
               const previousOdometer = vehicle.currentOdometer;
               vehicle.currentOdometer = newOdometerReading;
-              await vehicle.save();
+              const savedVehicle = await vehicle.save();
 
-              console.log(`Vehicle odometer updated: ${vehicle.licensePlate} from ${previousOdometer} to ${newOdometerReading} km`);
+              console.log(`✅ Vehicle odometer updated successfully:`, {
+                licensePlate: vehicle.licensePlate,
+                previousOdometer,
+                newOdometer: savedVehicle.currentOdometer,
+                difference: savedVehicle.currentOdometer - previousOdometer
+              });
             } else if (newOdometerReading < vehicle.currentOdometer) {
-              console.warn(`Warning: New odometer reading (${newOdometerReading}) is lower than vehicle current reading (${vehicle.currentOdometer}). Vehicle not updated.`);
+              console.warn(`⚠️ Warning: New odometer reading (${newOdometerReading}) is lower than current reading (${vehicle.currentOdometer}). Vehicle not updated.`);
+            } else {
+              console.log(`ℹ️ Odometer reading unchanged: ${vehicle.currentOdometer} km`);
             }
+          } else {
+            console.log('No valid odometer update data provided');
           }
         } else {
-          console.warn(`Warning: Driver's assigned vehicle not found for odometer update`);
+          console.warn(`⚠️ Warning: Vehicle with ID ${targetDriver.assignedVehicleId} not found in company ${companyId}`);
         }
       } catch (error) {
-        console.error('Error updating vehicle odometer:', error);
+        console.error('❌ Error updating vehicle odometer:', error);
         // Don't fail the expense creation if odometer update fails
       }
+    } else {
+      console.log('Skipping odometer update:', {
+        hasVehicle: !!targetDriver.assignedVehicleId,
+        hasOdometerData: !!(expenseData.odometerReading || expenseData.kilometers)
+      });
     }
     
     // Populate driver and vehicle information for response

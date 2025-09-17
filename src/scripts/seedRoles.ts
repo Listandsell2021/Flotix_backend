@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import { config, validateConfig } from '../shared-config/src';
+import { config, validateConfig } from '../config';
 import { Role } from '../models/Role';
-import { Permission, UserRole } from '../shared-types/src';
+import { Permission, UserRole } from '@fleetflow/types';
 
 validateConfig();
 

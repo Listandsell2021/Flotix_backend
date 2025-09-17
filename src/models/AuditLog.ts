@@ -5,7 +5,7 @@ import type {
   AuditModule, 
   AuditStatus, 
   UserRole 
-} from '../shared-types/src';
+} from '@fleetflow/types';
 
 export interface AuditLogDocument extends IAuditLog, Document {}
 

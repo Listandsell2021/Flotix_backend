@@ -3,7 +3,7 @@ import { User } from '../models/User';
 import { Company } from '../models/Company';
 import { Vehicle } from '../models/Vehicle';
 import { Expense } from '../models/Expense';
-import { config } from '../shared-config/src';
+import { config } from '../config';
 
 async function seedDatabase() {
   try {

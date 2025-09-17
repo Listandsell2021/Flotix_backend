@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import { config } from '../../shared-config/src';
+import { config } from '../../config';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {

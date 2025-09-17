@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { config } from '../shared-config/src';
+import { config } from '../config';
 import { Vehicle, User } from '../models';
 
 async function deleteAllVehicles() {

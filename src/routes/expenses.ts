@@ -17,7 +17,7 @@ import {
 } from '../middleware';
 import { Expense, User, Vehicle } from '../models';
 import { ReceiptOCRService, FirebaseStorageService } from '../modules';
-import { config } from '../shared-config/src';
+import { config } from '../config';
 import type { 
   UserRole, 
   ApiResponse,
@@ -25,7 +25,7 @@ import type {
   CreateExpenseRequest,
   Expense as IExpense,
   ExpenseFilters
-} from '../shared-types/src';
+} from '@fleetflow/types';
 
 const router = Router();
 

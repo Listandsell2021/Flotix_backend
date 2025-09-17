@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
-import type { OCRResult } from '../../shared-types/src';
-import { config } from '../../shared-config/src';
+import type { OCRResult } from '@fleetflow/types';
+import { config } from '../../config';
 
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { Vehicle } from '../models';
-import config from '../shared-config/src';
+import config from '../config';
 
 async function migrateDriverAssignments() {
   try {

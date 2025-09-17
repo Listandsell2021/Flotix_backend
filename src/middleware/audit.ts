@@ -3,7 +3,7 @@ import {
   AuditAction, 
   AuditModule, 
   AuditStatus 
-} from '../shared-types/src';
+} from '@fleetflow/types';
 import { AuditLog } from '../models/AuditLog';
 import type { AuthRequest } from './auth';
 

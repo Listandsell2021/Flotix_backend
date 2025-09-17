@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import type { Vehicle as IVehicle, VehicleType, VehicleStatus } from '../shared-types/src';
+import type { Vehicle as IVehicle, VehicleType, VehicleStatus } from '@fleetflow/types';
 
 export interface VehicleDocument extends IVehicle, Document {}
 

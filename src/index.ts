@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import { config, validateConfig } from './shared-config/src';
+import { config, validateConfig } from './config';
 import { connectDB } from './db/connection';
 import { errorHandler } from './middleware/errorHandler';
 import { authRoutes } from './routes/auth';

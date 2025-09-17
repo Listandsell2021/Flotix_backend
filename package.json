@@ -16,6 +16,7 @@
     "test-login": "tsx src/scripts/test-login.ts"
   },
   "dependencies": {
+    "@fleetflow/types": "workspace:*",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.1",

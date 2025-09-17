@@ -73,10 +73,10 @@ const assignVehicleSchema = z.object({
 });
 
 // POST /api/vehicles
-// Create new vehicle (Admin only)
+// Create new vehicle (Admin and Manager only)
 router.post('/',
   authenticate,
-  checkRole(['ADMIN']),
+  checkRole(['ADMIN', 'MANAGER']),
   validate(createVehicleSchema),
   auditVehicleCreate,
   asyncHandler(async (req: any, res) => {
@@ -115,7 +115,7 @@ router.post('/',
 // Get vehicles for company
 router.get('/',
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  checkRole(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'VIEWER']),
   asyncHandler(async (req: any, res) => {
     const { companyId: userCompanyId, role } = req.user;
     
@@ -182,7 +182,7 @@ router.get('/',
 // Get single vehicle
 router.get('/:id',
   authenticate,
-  checkRole(['ADMIN', 'DRIVER']),
+  checkRole(['ADMIN', 'DRIVER', 'MANAGER', 'VIEWER']),
   asyncHandler(async (req: any, res) => {
     const { companyId, role, userId } = req.user;
     const { id } = req.params;
@@ -274,7 +274,7 @@ router.get('/:id',
 // Update vehicle
 router.put('/:id',
   authenticate,
-  checkRole(['ADMIN']),
+  checkRole(['ADMIN', 'MANAGER']),
   validate(updateVehicleSchema),
   auditVehicleUpdate,
   asyncHandler(async (req: any, res) => {
@@ -323,7 +323,7 @@ router.put('/:id',
 // Assign vehicle to driver
 router.post('/:id/assign',
   authenticate,
-  checkRole(['ADMIN']),
+  checkRole(['ADMIN', 'MANAGER']),
   validate(assignVehicleSchema),
   auditVehicleAssign,
   asyncHandler(async (req: any, res) => {
@@ -384,7 +384,7 @@ router.post('/:id/assign',
 // Unassign vehicle from driver
 router.post('/:id/unassign',
   authenticate,
-  checkRole(['ADMIN']),
+  checkRole(['ADMIN', 'MANAGER']),
   auditVehicleUnassign,
   asyncHandler(async (req: any, res) => {
     const { companyId } = req.user;
@@ -444,7 +444,7 @@ router.post('/:id/unassign',
 // Update vehicle odometer reading (Driver can update their assigned vehicle)
 router.put('/:id/odometer',
   authenticate,
-  checkRole(['ADMIN', 'DRIVER']),
+  checkRole(['ADMIN', 'DRIVER', 'MANAGER']),
   asyncHandler(async (req: any, res) => {
     const { companyId, role, userId } = req.user;
     const { id } = req.params;
@@ -518,7 +518,7 @@ router.put('/:id/odometer',
 // Delete vehicle (only if not assigned)
 router.delete('/:id',
   authenticate,
-  checkRole(['ADMIN']),
+  checkRole(['ADMIN', 'MANAGER']),
   auditVehicleDelete,
   asyncHandler(async (req: any, res) => {
     const { companyId } = req.user;

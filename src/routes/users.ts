@@ -149,7 +149,7 @@ router.post('/',
 // Get users (filtered by role and company access)
 router.get('/',
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  checkRole(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'VIEWER']),
   validate(paginationSchema),
   asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
@@ -182,6 +182,15 @@ router.get('/',
       } else {
         // Show all company-level users (excluding other admins)
         query.role = { $in: ['DRIVER', 'MANAGER', 'VIEWER'] };
+      }
+    } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
+      // Manager/Viewer can see company users but with limited scope
+      query.companyId = currentUserCompanyId;
+      if (userRole) {
+        query.role = userRole;
+      } else {
+        // Show only drivers and viewers for managers/viewers
+        query.role = { $in: ['DRIVER', 'VIEWER'] };
       }
     }
 
@@ -240,7 +249,7 @@ router.get('/',
 // Get single user
 router.get('/:id',
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  checkRole(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'VIEWER']),
   checkCompanyAccess,
   asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
@@ -251,6 +260,10 @@ router.get('/:id',
     // Apply role-based access control
     if (currentUserRole === 'ADMIN') {
       query.companyId = currentUserCompanyId;
+      query.role = 'DRIVER';
+    } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
+      query.companyId = currentUserCompanyId;
+      // Managers and Viewers can only view drivers
       query.role = 'DRIVER';
     }
 
@@ -290,6 +303,10 @@ router.put('/:id',
     // Apply role-based access control
     if (currentUserRole === 'ADMIN') {
       query.companyId = currentUserCompanyId;
+      query.role = 'DRIVER';
+    } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
+      query.companyId = currentUserCompanyId;
+      // Managers and Viewers can only view drivers
       query.role = 'DRIVER';
     }
 
@@ -414,6 +431,10 @@ router.delete('/:id',
     if (currentUserRole === 'ADMIN') {
       query.companyId = currentUserCompanyId;
       query.role = 'DRIVER';
+    } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
+      query.companyId = currentUserCompanyId;
+      // Managers and Viewers can only view drivers
+      query.role = 'DRIVER';
     }
 
     const user = await User.findOne(query);
@@ -425,15 +446,42 @@ router.delete('/:id',
       } as ApiResponse);
     }
 
-    // Instead of hard delete, we deactivate the user
-    user.status = 'INACTIVE';
-    user.updatedAt = new Date();
-    await user.save();
+    // Check if hard delete is requested
+    const hardDelete = req.query.hard === 'true';
 
-    res.json({
-      success: true,
-      message: 'User deactivated successfully'
-    } as ApiResponse);
+    if (hardDelete) {
+      // Clean up related data before deleting user
+      // Remove role assignments
+      await RoleAssignment.deleteMany({ userId: id });
+
+      // Remove user from vehicles
+      await Vehicle.updateMany(
+        { assignedDriverIds: user._id },
+        { $pull: { assignedDriverIds: user._id } }
+      );
+      await Vehicle.updateMany(
+        { assignedDriverId: user._id },
+        { $unset: { assignedDriverId: 1 } }
+      );
+
+      // Actually delete the user from database
+      await User.findByIdAndDelete(id);
+
+      res.json({
+        success: true,
+        message: 'User deleted permanently'
+      } as ApiResponse);
+    } else {
+      // Soft delete - just deactivate the user
+      user.status = 'INACTIVE';
+      user.updatedAt = new Date();
+      await user.save();
+
+      res.json({
+        success: true,
+        message: 'User deactivated successfully'
+      } as ApiResponse);
+    }
   })
 );
 

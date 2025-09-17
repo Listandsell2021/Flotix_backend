@@ -48,7 +48,7 @@ const upload = multer({
 // Upload image to Firebase and return URL only (no OCR)
 router.post('/upload-image',
   authenticate,
-  checkRole(['DRIVER', 'ADMIN']),
+  checkRole(['DRIVER', 'ADMIN', 'MANAGER']),
   upload.single('image'),
   asyncHandler(async (req: any, res) => {
     if (!req.file) {
@@ -101,7 +101,7 @@ router.post('/upload-image',
 // Upload receipt and extract data with OCR
 router.post('/upload-receipt',
   authenticate,
-  checkRole(['DRIVER', 'ADMIN']),
+  checkRole(['DRIVER', 'ADMIN', 'MANAGER']),
   upload.single('receipt'),
   asyncHandler(async (req: any, res) => {
     if (!req.file) {
@@ -160,7 +160,7 @@ router.post('/upload-receipt',
 // Create new expense
 router.post('/',
   authenticate,
-  checkRole(['DRIVER', 'ADMIN']),
+  checkRole(['DRIVER', 'ADMIN', 'MANAGER']),
   validate(createExpenseSchema),
   auditExpenseCreate,
   asyncHandler(async (req: any, res) => {
@@ -177,10 +177,10 @@ router.post('/',
       if (!targetDriver) {
         throw createError('Driver not found or unauthorized', 403);
       }
-    } else if (role === 'ADMIN') {
-      // Admin creating expense for a driver
+    } else if (role === 'ADMIN' || role === 'MANAGER') {
+      // Admin/Manager creating expense for a driver
       if (!expenseData.driverId) {
-        throw createError('Driver ID is required when admin creates expense', 400);
+        throw createError('Driver ID is required when admin/manager creates expense', 400);
       }
       driverId = expenseData.driverId;
       targetDriver = await User.findOne({ _id: driverId, companyId, role: 'DRIVER' });
@@ -299,7 +299,7 @@ router.post('/',
 // Get expenses (filtered for drivers, all for admins)
 router.get('/',
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN', 'DRIVER']),
+  checkRole(['SUPER_ADMIN', 'ADMIN', 'DRIVER', 'MANAGER', 'VIEWER']),
   checkCompanyAccess,
   validate(expenseFiltersSchema),
   asyncHandler(async (req: any, res) => {
@@ -319,10 +319,11 @@ router.get('/',
     } else {
       companyId = userCompanyId;
     }
-    
+
     let query: any = { companyId };
 
     // Drivers can only see their own expenses
+    // VIEWER, MANAGER, ADMIN can see all company expenses
     if (role === 'DRIVER') {
       query.driverId = userId;
     }
@@ -395,6 +396,7 @@ router.get('/export',
     let query: any = { companyId };
 
     // Drivers can only export their own expenses
+    // VIEWER, MANAGER, ADMIN can export all company expenses
     if (role === 'DRIVER') {
       query.driverId = userId;
     }

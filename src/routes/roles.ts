@@ -367,10 +367,19 @@ router.delete('/:id',
     // Check if role is assigned to any users
     const assignmentCount = await RoleAssignment.countDocuments({ roleId: id });
     if (assignmentCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete role that is assigned to ${assignmentCount} user(s)`
-      } as ApiResponse);
+      // Check if force delete is requested (with cleanup of assignments)
+      const forceDelete = req.query.force === 'true';
+
+      if (forceDelete) {
+        // Remove all assignments for this role
+        await RoleAssignment.deleteMany({ roleId: id });
+        console.log(`Removed ${assignmentCount} role assignments for role ${id}`);
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot delete role that is assigned to ${assignmentCount} user(s). Add ?force=true to delete anyway and remove all assignments.`
+        } as ApiResponse);
+      }
     }
 
     await Role.findByIdAndDelete(id);

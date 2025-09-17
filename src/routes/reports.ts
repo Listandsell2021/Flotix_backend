@@ -23,7 +23,7 @@ const router = Router();
 // GET /api/reports/dashboard
 router.get('/dashboard',
   authenticate,
-  checkRole(['ADMIN', 'SUPER_ADMIN']),
+  checkRole(['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'VIEWER']),
   asyncHandler(async (req: any, res) => {
     const { companyId, role } = req.user;
     const now = new Date();
@@ -97,7 +97,7 @@ router.get('/dashboard',
 // GET /api/reports/summary
 router.get('/summary',
   authenticate,
-  checkRole(['ADMIN', 'SUPER_ADMIN']),
+  checkRole(['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'VIEWER']),
   validate(reportFiltersSchema),
   asyncHandler(async (req: any, res) => {
     const { companyId } = req.user;

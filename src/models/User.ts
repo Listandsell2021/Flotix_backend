@@ -29,7 +29,7 @@ const userSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: ['SUPER_ADMIN', 'ADMIN', 'DRIVER'],
+      enum: ['SUPER_ADMIN', 'ADMIN', 'DRIVER', 'MANAGER', 'VIEWER'],
       required: true,
     },
     companyId: {

@@ -20,7 +20,7 @@ const router = Router();
 // GET /api/audit
 router.get('/',
   authenticate,
-  checkRole(['ADMIN', 'SUPER_ADMIN']),
+  checkRole(['ADMIN', 'SUPER_ADMIN', 'MANAGER']),
   validate(paginationSchema),
   asyncHandler(async (req: any, res) => {
     const { role, companyId } = req.user;
@@ -30,8 +30,8 @@ router.get('/',
 
     // Build query based on role
     let query: any = {};
-    
-    if (role === 'ADMIN') {
+
+    if (role === 'ADMIN' || role === 'MANAGER') {
       query.companyId = companyId;
     }
 

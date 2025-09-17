@@ -81,7 +81,7 @@ router.get('/',
 // Get company details (Super Admin can access any, others only their own)
 router.get('/:id',
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN', 'DRIVER']),
+  checkRole(['SUPER_ADMIN', 'ADMIN', 'DRIVER', 'MANAGER', 'VIEWER']),
   asyncHandler(async (req: any, res) => {
     const { id } = req.params;
     const { role, companyId: userCompanyId } = req.user;

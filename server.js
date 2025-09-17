@@ -33,15 +33,22 @@ app.use(helmet({
 }));
 
 // CORS configuration - allow multiple origins
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://167.235.34.48',
-  'http://167.235.34.48:3000',
-  'http://167.235.34.48:3001',
-  'https://flotix.de',
-  'https://www.flotix.de'
-];
+// Read from ALLOWED_ORIGINS env variable or use defaults
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:8081',
+    'http://192.168.188.45',
+    'http://167.235.34.48',
+    'http://167.235.34.48:3000',
+    'http://167.235.34.48:3001',
+    'https://flotix.de',
+    'https://www.flotix.de'
+  ];
+
+console.log('🔒 CORS: Allowed origins:', allowedOrigins);
 
 app.use(cors({
   origin: function(origin, callback) {

@@ -127,10 +127,7 @@ vehicleSchema.pre('validate', function (next) {
     this.licensePlate = this.licensePlate.toUpperCase();
   }
   
-  // Validate VIN length if provided
-  if (this.vin && this.vin.length !== 17) {
-    return next(new Error('VIN must be exactly 17 characters long'));
-  }
+  // VIN validation removed - accept any length
   
   // Ensure current year is reasonable
   const currentYear = new Date().getFullYear();

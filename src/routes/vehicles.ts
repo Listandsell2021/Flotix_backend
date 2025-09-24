@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { 
-  authenticate, 
-  checkRole, 
+import {
+  authenticate,
+  checkRole,
   checkCompanyAccess,
   validate,
   asyncHandler,
@@ -10,55 +10,25 @@ import {
   auditVehicleUpdate,
   auditVehicleDelete,
   auditVehicleAssign,
-  auditVehicleUnassign
+  auditVehicleUnassign,
+  createVehicleSchema,
+  updateVehicleSchema
 } from '../middleware';
 import { Vehicle, User } from '../models';
-import type { 
+import { 
   ApiResponse,
   PaginatedResponse,
   CreateVehicleRequest,
   AssignVehicleRequest,
-  Vehicle as IVehicle
+  Vehicle as IVehicle,
+  UserRole
 } from '@fleetflow/types';
+import { UserRole as UserRoleEnum } from '@fleetflow/types';
 import { z } from 'zod';
 
-const router = Router();
+const router: Router = Router();
 
-// Validation schemas
-const createVehicleSchema = z.object({
-  body: z.object({
-    make: z.string().min(1, 'Make is required').max(50, 'Make too long'),
-    model: z.string().min(1, 'Model is required').max(50, 'Model too long'),
-    year: z.number().int().min(1900).max(new Date().getFullYear() + 2),
-    licensePlate: z.string().min(1, 'License plate is required').max(20, 'License plate too long'),
-    vin: z.string().length(17, 'VIN must be exactly 17 characters').optional(),
-    type: z.enum(['CAR', 'TRUCK', 'VAN', 'MOTORCYCLE']),
-    currentOdometer: z.number().min(0, 'Odometer must be positive').max(9999999, 'Odometer too high'),
-    fuelType: z.string().max(30, 'Fuel type too long').optional(),
-    color: z.string().max(30, 'Color too long').optional(),
-    purchaseDate: z.coerce.date().optional(),
-  }),
-});
-
-const updateVehicleSchema = z.object({
-  body: z.object({
-    make: z.string().min(1, 'Make is required').max(50, 'Make too long').optional(),
-    model: z.string().min(1, 'Model is required').max(50, 'Model too long').optional(),
-    year: z.number().int().min(1900).max(new Date().getFullYear() + 2).optional(),
-    licensePlate: z.string().min(1, 'License plate is required').max(20, 'License plate too long').optional(),
-    vin: z.string().length(17, 'VIN must be exactly 17 characters').optional(),
-    type: z.enum(['CAR', 'TRUCK', 'VAN', 'MOTORCYCLE']).optional(),
-    status: z.enum(['ACTIVE', 'MAINTENANCE', 'RETIRED']).optional(),
-    currentOdometer: z.number().min(0, 'Odometer must be positive').max(9999999, 'Odometer too high').optional(),
-    fuelType: z.string().max(30, 'Fuel type too long').optional(),
-    color: z.string().max(30, 'Color too long').optional(),
-    purchaseDate: z.coerce.date().optional(),
-  }),
-  params: z.object({
-    id: z.string().min(1, 'Vehicle ID is required'),
-  }),
-});
-
+// Assignment validation schema
 const assignVehicleSchema = z.object({
   body: z.object({
     driverId: z.string().min(1).optional(),
@@ -76,10 +46,10 @@ const assignVehicleSchema = z.object({
 // Create new vehicle (Admin and Manager only)
 router.post('/',
   authenticate,
-  checkRole(['ADMIN', 'MANAGER']),
+  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
   validate(createVehicleSchema),
   auditVehicleCreate,
-  asyncHandler(async (req: any, res) => {
+  asyncHandler(async (req: any, res:any) => {
     const vehicleData: CreateVehicleRequest = req.body;
     const { companyId } = req.user;
 
@@ -115,8 +85,8 @@ router.post('/',
 // Get vehicles for company
 router.get('/',
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'VIEWER']),
-  asyncHandler(async (req: any, res) => {
+  checkRole([UserRoleEnum.SUPER_ADMIN, UserRoleEnum.ADMIN, UserRoleEnum.MANAGER, UserRoleEnum.VIEWER ]),
+  asyncHandler(async (req: any, res:any) => {
     const { companyId: userCompanyId, role } = req.user;
     
     const page = parseInt(req.query.page) || 1;
@@ -182,8 +152,8 @@ router.get('/',
 // Get single vehicle
 router.get('/:id',
   authenticate,
-  checkRole(['ADMIN', 'DRIVER', 'MANAGER', 'VIEWER']),
-  asyncHandler(async (req: any, res) => {
+  checkRole([UserRoleEnum.SUPER_ADMIN, UserRoleEnum.ADMIN, UserRoleEnum.MANAGER, UserRoleEnum.DRIVER, UserRoleEnum.VIEWER ]),
+  asyncHandler(async (req: any, res:any) => {
     const { companyId, role, userId } = req.user;
     const { id } = req.params;
 
@@ -231,7 +201,20 @@ router.get('/:id',
       const debugVehicle = await Vehicle.findById(id);
       console.log('Debug - Vehicle exists in DB:', debugVehicle ? 'YES' : 'NO');
       
-      const debugInfo = {
+      const debugInfo: {
+        vehicleExistsInDB: boolean;
+        queryUsed: any;
+        userInfo: {
+          userId: any;
+          role: any;
+          companyId: any;
+        };
+        vehicleDetails?: {
+          id: string;
+          companyId: string;
+          assignedDriverId: string | null;
+        };
+      } = {
         vehicleExistsInDB: debugVehicle ? true : false,
         queryUsed: query,
         userInfo: {
@@ -274,10 +257,10 @@ router.get('/:id',
 // Update vehicle
 router.put('/:id',
   authenticate,
-  checkRole(['ADMIN', 'MANAGER']),
+  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
   validate(updateVehicleSchema),
   auditVehicleUpdate,
-  asyncHandler(async (req: any, res) => {
+  asyncHandler(async (req: any, res:any) => {
     const { companyId } = req.user;
     const { id } = req.params;
     const updateData = req.body;
@@ -323,10 +306,10 @@ router.put('/:id',
 // Assign vehicle to driver
 router.post('/:id/assign',
   authenticate,
-  checkRole(['ADMIN', 'MANAGER']),
+  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
   validate(assignVehicleSchema),
   auditVehicleAssign,
-  asyncHandler(async (req: any, res) => {
+  asyncHandler(async (req: any, res:any) => {
     const { companyId } = req.user;
     const { id } = req.params;
     const { driverId, driverIds } = req.body;
@@ -363,11 +346,28 @@ router.post('/:id/assign',
         message: 'One or more drivers not found or not authorized'
       } as ApiResponse);
     }
+     // Check if any driver already has a vehicle assigned
+   const alreadyAssigned = drivers.find(d => d.assignedVehicleId && d.assignedVehicleId.toString() !== vehicle._id.toString());
+    if (alreadyAssigned) {
+      return res.status(400).json({
+        success: false,
+        message: `Driver ${alreadyAssigned.name || alreadyAssigned._id} is already assigned to another vehicle`
+      } as ApiResponse);
+    }
+
     
+
     // Assign drivers to vehicle
     vehicle.assignedDriverIds = driversToAssign;
     vehicle.assignedDriverId = driversToAssign[0]; // Set primary driver
     await vehicle.save();
+
+    // Update all users with the new assigned vehicle
+    await User.updateMany(
+      { _id: { $in: driversToAssign } },
+      { $set: { assignedVehicleId: vehicle._id } }
+    );
+
 
     await vehicle.populate('assignedDriverId', 'name email status');
     await vehicle.populate('assignedDriverIds', 'name email status');
@@ -384,9 +384,9 @@ router.post('/:id/assign',
 // Unassign vehicle from driver
 router.post('/:id/unassign',
   authenticate,
-  checkRole(['ADMIN', 'MANAGER']),
+  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
   auditVehicleUnassign,
-  asyncHandler(async (req: any, res) => {
+  asyncHandler(async (req: any, res:any) => {
     const { companyId } = req.user;
     const { id } = req.params;
 
@@ -444,8 +444,8 @@ router.post('/:id/unassign',
 // Update vehicle odometer reading (Driver can update their assigned vehicle)
 router.put('/:id/odometer',
   authenticate,
-  checkRole(['ADMIN', 'DRIVER', 'MANAGER']),
-  asyncHandler(async (req: any, res) => {
+  checkRole([UserRoleEnum.DRIVER, UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
+  asyncHandler(async (req: any, res:any) => {
     const { companyId, role, userId } = req.user;
     const { id } = req.params;
     const { currentOdometer } = req.body;
@@ -518,9 +518,9 @@ router.put('/:id/odometer',
 // Delete vehicle (only if not assigned)
 router.delete('/:id',
   authenticate,
-  checkRole(['ADMIN', 'MANAGER']),
+  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
   auditVehicleDelete,
-  asyncHandler(async (req: any, res) => {
+  asyncHandler(async (req: any, res:any) => {
     const { companyId } = req.user;
     const { id } = req.params;
 

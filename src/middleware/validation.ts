@@ -102,9 +102,11 @@ export const createExpenseSchema = z.object({
     amountFinal: z.number().min(0, 'Amount must be positive').max(100000, 'Amount too large'),
     currency: z.string().regex(/^[A-Z]{3}$/, 'Currency must be a valid 3-letter ISO code'),
     receiptUrl: z.string().url('Invalid receipt URL'),
+    merchant: z.string().max(200, 'Merchant name too long').optional(),
     category: z.enum(['TOLL', 'PARKING', 'REPAIR', 'OTHER']).optional(),
     notes: z.string().max(500, 'Notes too long').optional(),
     kilometers: z.number().min(0, 'Kilometers must be positive').max(9999999, 'Kilometers cannot exceed 9,999,999').optional(),
+    odometerReading: z.number().min(0, 'Odometer reading must be positive').max(9999999, 'Odometer reading cannot exceed 9,999,999').optional(),
     date: z.coerce.date().max(new Date(), 'Date cannot be in the future'),
   }),
 });
@@ -112,9 +114,11 @@ export const createExpenseSchema = z.object({
 export const updateExpenseSchema = z.object({
   body: z.object({
     amountFinal: z.number().min(0, 'Amount must be positive').max(100000, 'Amount too large').optional(),
+    merchant: z.string().max(200, 'Merchant name too long').optional(),
     category: z.enum(['TOLL', 'PARKING', 'REPAIR', 'OTHER']).optional(),
     notes: z.string().max(500, 'Notes too long').optional(),
     kilometers: z.number().min(0, 'Kilometers must be positive').max(9999999, 'Kilometers cannot exceed 9,999,999').optional(),
+    odometerReading: z.number().min(0, 'Odometer reading must be positive').max(9999999, 'Odometer reading cannot exceed 9,999,999').optional(),
     date: z.coerce.date().max(new Date(), 'Date cannot be in the future').optional(),
   }),
   params: z.object({
@@ -156,6 +160,41 @@ export const paginationSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
+  }),
+});
+
+// Vehicle schemas
+export const createVehicleSchema = z.object({
+  body: z.object({
+    make: z.string().min(1, 'Make is required').max(50, 'Make too long'),
+    model: z.string().min(1, 'Model is required').max(50, 'Model too long'),
+    year: z.number().int().min(1900).max(new Date().getFullYear() + 2),
+    licensePlate: z.string().min(1, 'License plate is required').max(20, 'License plate too long'),
+    vin: z.string().optional(),
+    type: z.enum(['CAR', 'TRUCK', 'VAN', 'MOTORCYCLE']),
+    currentOdometer: z.number().min(0, 'Odometer must be positive').max(9999999, 'Odometer too high'),
+    fuelType: z.string().max(30, 'Fuel type too long').optional(),
+    color: z.string().max(30, 'Color too long').optional(),
+    purchaseDate: z.coerce.date().optional(),
+  }),
+});
+
+export const updateVehicleSchema = z.object({
+  body: z.object({
+    make: z.string().min(1, 'Make is required').max(50, 'Make too long').optional(),
+    model: z.string().min(1, 'Model is required').max(50, 'Model too long').optional(),
+    year: z.number().int().min(1900).max(new Date().getFullYear() + 2).optional(),
+    licensePlate: z.string().min(1, 'License plate is required').max(20, 'License plate too long').optional(),
+    vin: z.string().optional(),
+    type: z.enum(['CAR', 'TRUCK', 'VAN', 'MOTORCYCLE']).optional(),
+    status: z.enum(['ACTIVE', 'MAINTENANCE', 'RETIRED']).optional(),
+    currentOdometer: z.number().min(0, 'Odometer must be positive').max(9999999, 'Odometer too high').optional(),
+    fuelType: z.string().max(30, 'Fuel type too long').optional(),
+    color: z.string().max(30, 'Color too long').optional(),
+    purchaseDate: z.coerce.date().optional(),
+  }),
+  params: z.object({
+    id: z.string().min(1, 'Vehicle ID is required'),
   }),
 });
 

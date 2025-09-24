@@ -11,14 +11,14 @@ import {
   getClientIP,
 } from "../middleware";
 import { User, AuditLog } from "../models";
-import { AuditAction, AuditModule, AuditStatus } from "@fleetflow/types";
+import { AuditAction, AuditModule, AuditStatus } from "../types";
 import type {
   LoginRequest,
   LoginResponse,
   ApiResponse,
   AuthTokens,
   JWTPayload,
-} from "@fleetflow/types";
+} from "../types";
 
 const router = Router();
 

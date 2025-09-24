@@ -12,18 +12,22 @@ module.exports = {
       NODE_ENV: 'production',
       PORT: 3001
     },
+    // Logging
     error_file: './logs/err.log',
     out_file: './logs/out.log',
     log_file: './logs/combined.log',
     time: true,
+
+    // Performance
     watch: false,
     max_memory_restart: '1G',
-    cwd: './',
-    interpreter: 'node',
-    interpreter_args: '',
     autorestart: true,
     max_restarts: 10,
     min_uptime: '10s',
-    kill_timeout: 5000
+    kill_timeout: 5000,
+
+    // Health monitoring
+    health_check_interval: 30000,
+    restart_delay: 1000
   }]
 };

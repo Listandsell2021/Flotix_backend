@@ -22,8 +22,8 @@ import {
   AssignVehicleRequest,
   Vehicle as IVehicle,
   UserRole
-} from '@fleetflow/types';
-import { UserRole as UserRoleEnum } from '@fleetflow/types';
+} from '../types';
+import { UserRole as UserRoleEnum } from '../types';
 import { z } from 'zod';
 
 const router: Router = Router();

@@ -25,7 +25,7 @@ import {
   CreateExpenseRequest,
   Expense as IExpense,
   ExpenseFilters,
-} from "@fleetflow/types";
+} from "../types";
 
 const router: ReturnType<typeof Router> = Router();
 

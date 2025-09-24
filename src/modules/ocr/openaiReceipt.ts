@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
-import type { OCRResult } from '@fleetflow/types';
+import type { OCRResult } from '../types';
 import { config } from '../../config';
 
 const openai = new OpenAI({

@@ -20,7 +20,7 @@ import type {
   PaginatedResponse,
   CreateUserRequest,
   User as IUser
-} from '../types';
+} from '@fleetflow/types';
 
 const router = Router();
 

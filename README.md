@@ -1,19 +1,66 @@
 # Flotix Backend - Standalone Deployment
 
-A complete fleet management backend API that can be deployed independently on any server.
+A complete fleet management backend API that can be deployed independently on any server. This package contains both the production-ready JavaScript version and the full TypeScript source code.
 
-## 🚀 Quick Deployment
+## 📁 Package Contents
 
-### Prerequisites
+```
+backend-deploy/
+├── server.js                 # Production-ready JavaScript server
+├── firebase-service.js       # Firebase integration service
+├── firebase-config.json      # Firebase credentials
+├── package.json              # Dependencies and scripts
+├── ecosystem.config.js       # PM2 configuration
+├── deploy.sh                 # Automated deployment script
+├── .env.example              # Environment variables template
+├── README.md                 # This documentation
+├── tsconfig.json             # TypeScript configuration
+└── src/                      # Full TypeScript source code
+    ├── config.ts
+    ├── server.ts
+    ├── models/               # Database models
+    ├── routes/               # API routes
+    ├── middleware/           # Express middleware
+    ├── modules/              # Business logic modules
+    └── types/                # TypeScript type definitions
+```
+
+## 🚀 Quick Deployment Options
+
+### Option 1: JavaScript Production Server (Recommended)
+Uses the pre-compiled `server.js` file for immediate deployment.
+
+**Prerequisites:**
 - Node.js 18+
 - npm or yarn
 - MongoDB database (local or cloud)
 - PM2 (will be installed automatically)
 
-### One-Command Deployment
+**One-Command Deployment:**
 ```bash
 chmod +x deploy.sh
 ./deploy.sh
+```
+
+### Option 2: TypeScript Development/Custom Build
+Compile from TypeScript source for development or customization.
+
+**Prerequisites:**
+- Node.js 18+
+- npm or yarn
+- MongoDB database
+- TypeScript knowledge for customization
+
+**Manual Build & Deploy:**
+```bash
+# Install dependencies (includes dev dependencies)
+npm install
+
+# Build from TypeScript source
+npm run build
+
+# Start built version
+npm run start:ts
 ```
 
 ## 📋 Manual Deployment Steps
@@ -33,16 +80,39 @@ nano .env
 ```
 
 ### 3. Build & Start
-```bash
-# Build TypeScript
-npm run build
 
+**Option A: Use JavaScript Server (Recommended for Production)**
+```bash
 # Start with PM2 (recommended for production)
 npm run start:pm2
 
 # Or start with Node.js directly
 npm start
 ```
+
+**Option B: Build from TypeScript Source**
+```bash
+# Build TypeScript to dist/ directory
+npm run build
+
+# Start compiled TypeScript version
+npm run start:ts
+
+# Or build and watch for changes (development)
+npm run build:watch
+```
+
+## 🛠️ Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm start` | Start JavaScript server (production) |
+| `npm run dev` | Start JavaScript server (development) |
+| `npm run build` | Compile TypeScript source to `dist/` |
+| `npm run build:watch` | Watch and compile TypeScript changes |
+| `npm run start:ts` | Build and start TypeScript version |
+| `npm run start:pm2` | Start with PM2 process manager |
+| `npm run deploy` | Run automated deployment script |
 
 ## 🔧 Configuration
 
@@ -55,7 +125,7 @@ npm start
 | `JWT_REFRESH_SECRET` | JWT refresh token secret | `your-refresh-key` |
 | `ALLOWED_ORIGINS` | Frontend URLs (CORS) | `https://app.yourdomain.com` |
 | `OPENAI_API_KEY` | OpenAI API key for OCR | `sk-...` |
-| `FIREBASE_PROJECT_ID` | Firebase project ID | `your-project-id` |
+| `FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | `your-project.firebasestorage.app` |
 
 ### Optional Environment Variables
 
@@ -65,6 +135,33 @@ npm start
 | `NODE_ENV` | `production` | Environment mode |
 | `MAX_FILE_SIZE` | `5242880` | Max upload size (5MB) |
 | `DEFAULT_DRIVER_LIMIT` | `50` | Default driver limit per company |
+
+### Firebase Configuration
+
+The application uses Firebase for file storage. The Firebase credentials are configured in the `firebase-config.json` file:
+
+1. **Create Firebase Service Account:**
+   - Go to Firebase Console → Project Settings → Service Accounts
+   - Click "Generate new private key"
+   - Download the JSON file
+
+2. **Update firebase-config.json:**
+   ```json
+   {
+     "type": "service_account",
+     "project_id": "your-project-id",
+     "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+     "client_email": "firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com",
+     // ... rest of the service account JSON
+   }
+   ```
+
+3. **Firebase Storage Setup:**
+   - Enable Firebase Storage in your Firebase project
+   - Set up storage rules for your bucket
+   - Update the `FIREBASE_STORAGE_BUCKET` in .env file
+
+**Note:** If `firebase-config.json` is not present, the server will start but file upload features will be disabled.
 
 ## 🌐 API Endpoints
 
@@ -107,6 +204,10 @@ npm start
 - `PUT /api/expenses/:id` - Update expense
 - `DELETE /api/expenses/:id` - Delete expense
 - `POST /api/expenses/upload-receipt` - Upload receipt with OCR
+
+### File Upload
+- `POST /api/upload/receipt` - Upload receipt image to Firebase
+- `GET /api/firebase/status` - Check Firebase service status
 
 ## 🛠️ Server Management
 

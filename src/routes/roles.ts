@@ -8,13 +8,13 @@ import {
   createError
 } from '../middleware';
 import { Role, RoleAssignment, User } from '../models';
-import { Permission, UserRole } from '../types';
+import { Permission, UserRole } from '@fleetflow/types';
 import type { 
   ApiResponse,
   PaginatedResponse,
   CreateRoleRequest,
   Role as IRole
-} from '../types';
+} from '@fleetflow/types';
 import { z } from 'zod';
 
 const router = Router();

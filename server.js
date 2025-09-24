@@ -7,6 +7,8 @@ const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const sql = require("mssql");
+const multer = require("multer");
+const { FirebaseStorageService, initializeFirebase } = require("./firebase-service");
 require("dotenv").config();
 
 const app = express();
@@ -510,6 +512,103 @@ app.put("/api/settings/stripe", async (req, res) => {
   }
 });
 
+// File upload configuration
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG and PNG images are allowed.'));
+    }
+  }
+});
+
+// File upload endpoint
+app.post('/api/upload/receipt', upload.single('receipt'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    // For demo purposes, use default user and company IDs
+    // In a real implementation, these would come from authentication
+    const userId = req.body.userId || 'demo-user';
+    const companyId = req.body.companyId || 'demo-company';
+
+    // Validate file
+    const validation = FirebaseStorageService.validateReceiptFile(
+      req.file.buffer,
+      req.file.mimetype,
+      req.file.originalname
+    );
+
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: validation.error
+      });
+    }
+
+    // Check if Firebase is available
+    if (!FirebaseStorageService.isAvailable()) {
+      return res.status(503).json({
+        success: false,
+        message: 'File upload service is not available. Please check Firebase configuration.'
+      });
+    }
+
+    // Upload to Firebase
+    const publicUrl = await FirebaseStorageService.uploadReceiptImage(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+      userId,
+      companyId
+    );
+
+    res.json({
+      success: true,
+      message: 'File uploaded successfully',
+      data: {
+        url: publicUrl,
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimeType: req.file.mimetype
+      }
+    });
+
+  } catch (error) {
+    console.error('File upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload file',
+      error: error.message
+    });
+  }
+});
+
+// Firebase service status endpoint
+app.get('/api/firebase/status', (req, res) => {
+  const isAvailable = FirebaseStorageService.isAvailable();
+  res.json({
+    success: true,
+    firebase: {
+      available: isAvailable,
+      message: isAvailable
+        ? 'Firebase storage is available'
+        : 'Firebase storage is not configured'
+    }
+  });
+});
+
 // 404 handler
 app.use("*", (req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
@@ -536,6 +635,10 @@ const startServer = async () => {
     });
 
     console.log("✅ Connected to MongoDB");
+
+    // Initialize Firebase
+    console.log("🔥 Initializing Firebase...");
+    initializeFirebase();
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

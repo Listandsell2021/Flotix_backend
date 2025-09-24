@@ -13,7 +13,7 @@ import type {
   ApiResponse,
   PaginatedResponse,
   AuditLog as IAuditLog
-} from '../types';
+} from '@fleetflow/types';
 
 const router = Router();
 

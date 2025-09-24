@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import type { Company as ICompany, CompanyStatus, CompanyPlan } from '../types';
+import type { Company as ICompany, CompanyStatus, CompanyPlan } from '@fleetflow/types';
 import { config } from '../config';
 
 export interface CompanyDocument extends ICompany, Document {}

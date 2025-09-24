@@ -16,7 +16,7 @@ import type {
   ReportData,
   ReportFilters,
   DashboardKPIs
-} from '../types';
+} from '@fleetflow/types';
 
 const router = Router();
 

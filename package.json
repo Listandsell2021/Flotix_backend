@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "start": "node server.js",
+    "start:ts": "tsx src/index.ts",
     "start:prod": "node dist/index.js",
     "start:server": "node server.js",
     "type-check": "tsc --noEmit",

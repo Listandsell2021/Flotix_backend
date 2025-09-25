@@ -1,568 +1,168 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const compression = require("compression");
-const cookieParser = require("cookie-parser");
-const rateLimit = require("express-rate-limit");
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const sql = require("mssql");
-require("dotenv").config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const cookieParser = require('cookie-parser');
+const multer = require('multer');
+
+// Import configuration and database connection
+const { config, validateConfig } = require('./src/config');
+const { connectDB } = require('./src/config/database');
+
+// Import middleware
+const { errorHandler } = require('./src/middleware');
+
+// Import routes
+const {
+  authRoutes,
+  userRoutes,
+  companyRoutes,
+  vehicleRoutes,
+  expenseRoutes,
+  reportRoutes,
+  auditRoutes,
+  roleRoutes,
+} = require('./src/routes');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+
+// Validate configuration on startup
+try {
+  validateConfig();
+} catch (error) {
+  console.error('Configuration validation failed:', error);
+  process.exit(1);
+}
+
+// Security middleware
+app.use(helmet());
+app.use(cors({
+  origin: config.ALLOWED_ORIGINS,
+  credentials: true
+}));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: "Too many requests from this IP, please try again later." },
+  windowMs: config.RATE_LIMIT_WINDOW_MS,
+  max: config.RATE_LIMIT_MAX_REQUESTS,
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.',
+    retryAfter: Math.ceil(config.RATE_LIMIT_WINDOW_MS / 1000)
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for health checks and in test environment
+    return req.path === '/health' || config.NODE_ENV === 'test';
+  }
 });
+app.use('/api', limiter);
 
-// Security middleware
-app.use(
-  helmet({
-    crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
-  })
-);
-
-// CORS configuration - allow multiple origins
-// Read from ALLOWED_ORIGINS env variable or use defaults
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
-  : [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "http://localhost:8081",
-      "http://192.168.188.45",
-      "http://167.235.34.48",
-      "http://167.235.34.48:3000",
-      "http://167.235.34.48:3001",
-      "https://flotix.de",
-      "https://www.flotix.de",
-      "http://192.168.188.45:3000",
-      "http://192.168.188.45:3001",
-    ];
-
-console.log("🔒 CORS: Allowed origins:", allowedOrigins);
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-
-      if (
-        allowedOrigins.indexOf(origin) !== -1 ||
-        process.env.NODE_ENV === "development"
-      ) {
-        callback(null, true);
-      } else {
-        console.warn(`⚠️ CORS: Blocked request from origin: ${origin}`);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-    ],
-    exposedHeaders: ["Content-Length", "Content-Range"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-    maxAge: 86400, // Cache preflight response for 24 hours
-  })
-);
-
-// Handle preflight requests explicitly
-app.options("*", (req, res) => {
-  res.header("Access-Control-Allow-Origin", req.headers.origin);
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-  );
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With, Accept"
-  );
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.sendStatus(204);
-});
-
+// Compression and parsing middleware
 app.use(compression());
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(morgan(config.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-if (process.env.NODE_ENV === "production") {
-  app.use("/api", limiter);
-}
-
-// Basic User Schema
-const userSchema = new mongoose.Schema(
-  {
-    username: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, default: "employee" },
-    permissions: [String],
-    isActive: { type: Boolean, default: true },
-    lastLogin: Date,
+// Configure multer for file uploads (ready for future use)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: config.MAX_FILE_SIZE,
   },
-  { timestamps: true }
-);
-
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(12);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
-
-const User = mongoose.model("User", userSchema);
-
-// Settings Schema for storing configuration data
-const settingsSchema = new mongoose.Schema(
-  {
-    category: { type: String, required: true, unique: true }, // 'smtp', 'wawi', 'stripe', 'general'
-    settings: { type: mongoose.Schema.Types.Mixed, required: true },
+  fileFilter: (req, file, cb) => {
+    if (config.ALLOWED_FILE_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG and PNG images are allowed.'));
+    }
   },
-  { timestamps: true }
-);
-
-const Settings = mongoose.model("Settings", settingsSchema);
-
-// Basic routes
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
-  });
 });
 
-// Test route
-app.get("/api/test", (req, res) => {
-  res.json({
-    message: "Backend API is working!",
-    timestamp: new Date().toISOString(),
-  });
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Login route (basic implementation)
-app.post("/api/auth/login", async (req, res) => {
+// Database debug endpoint (temporary for testing)
+app.get('/debug/db', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { User, Company, Vehicle, Expense, AuditLog } = require('./src/models');
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
-    }
-
-    // For demo purposes, create admin user if it doesn't exist
-    let user = await User.findOne({ email });
-
-    if (!user && email === "admin@example.com") {
-      user = new User({
-        username: "admin",
-        email: "admin@example.com",
-        password: "password123",
-        role: "admin",
-        permissions: ["admin_access"],
-      });
-      await user.save();
-      console.log("✅ Demo admin user created");
-    }
-
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    user.lastLogin = new Date();
-    await user.save();
-
-    const userResponse = {
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions,
-      isActive: user.isActive,
+    const stats = {
+      users: await User.countDocuments(),
+      companies: await Company.countDocuments(),
+      vehicles: await Vehicle.countDocuments(),
+      expenses: await Expense.countDocuments(),
+      auditLogs: await AuditLog.countDocuments(),
+      timestamp: new Date().toISOString()
     };
 
-    res.json({
-      message: "Login successful",
-      user: userResponse,
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
-
-// Get current user
-app.get("/api/auth/me", async (req, res) => {
-  try {
-    // For demo, return admin user
-    const user = await User.findOne({ email: "admin@example.com" });
-    if (!user) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const userResponse = {
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions,
-      isActive: user.isActive,
-    };
-
-    res.json({ user: userResponse });
-  } catch (error) {
-    console.error("Auth check error:", error);
-    res.status(500).json({ error: "Authentication check failed" });
-  }
-});
-
-// Logout route
-app.post("/api/auth/logout", (req, res) => {
-  res.json({ message: "Logout successful" });
-});
-
-// ===== SETTINGS ROUTES =====
-
-// Generic settings routes
-const getSettings = async (category, defaultSettings = {}) => {
-  try {
-    const settings = await Settings.findOne({ category });
-    return settings ? settings.settings : defaultSettings;
-  } catch (error) {
-    console.error(`Error getting ${category} settings:`, error);
-    return defaultSettings;
-  }
-};
-
-const saveSettings = async (category, settingsData) => {
-  try {
-    const settings = await Settings.findOneAndUpdate(
-      { category },
-      { settings: settingsData },
-      { upsert: true, new: true }
-    );
-    return settings;
-  } catch (error) {
-    console.error(`Error saving ${category} settings:`, error);
-    throw error;
-  }
-};
-
-// WAWI Database Settings Routes
-app.get("/api/settings/wawi", async (req, res) => {
-  try {
-    const defaultSettings = {
-      server: "",
-      database: "",
-      username: "",
-      password: "",
-      port: "1433",
-      trustServerCertificate: true,
-    };
-
-    const settings = await getSettings("wawi", defaultSettings);
-    res.json({ settings });
-  } catch (error) {
-    console.error("Error fetching WAWI settings:", error);
-    res.status(500).json({ error: "Failed to fetch WAWI settings" });
-  }
-});
-
-app.put("/api/settings/wawi", async (req, res) => {
-  try {
-    const {
-      server,
-      database,
-      username,
-      password,
-      port,
-      trustServerCertificate,
-    } = req.body;
-
-    // Basic validation
-    if (!server || !database || !username || !password || !port) {
-      return res
-        .status(400)
-        .json({ error: "All WAWI settings fields are required" });
-    }
-
-    const settingsData = {
-      server,
-      database,
-      username,
-      password,
-      port,
-      trustServerCertificate: Boolean(trustServerCertificate),
-    };
-
-    await saveSettings("wawi", settingsData);
-    res.json({
-      message: "WAWI settings saved successfully",
-      settings: settingsData,
-    });
-  } catch (error) {
-    console.error("Error saving WAWI settings:", error);
-    res.status(500).json({ error: "Failed to save WAWI settings" });
-  }
-});
-
-// MSSQL Connection Test Route
-app.post("/api/settings/test/mssql", async (req, res) => {
-  try {
-    // Get current WAWI settings
-    const wawiSettings = await getSettings("wawi");
-
-    if (!wawiSettings.server || !wawiSettings.database) {
-      return res
-        .status(400)
-        .json({ error: "WAWI settings are not configured" });
-    }
-
-    const config = {
-      server: wawiSettings.server,
-      port: parseInt(wawiSettings.port) || 1433,
-      database: wawiSettings.database,
-      user: wawiSettings.username,
-      password: wawiSettings.password,
-      options: {
-        encrypt: false, // Use true for Azure SQL
-        trustServerCertificate: wawiSettings.trustServerCertificate,
-        connectTimeout: 10000,
-        requestTimeout: 10000,
-      },
-      pool: {
-        max: 1,
-        min: 0,
-        idleTimeoutMillis: 30000,
-      },
-    };
-
-    console.log(
-      "Testing MSSQL connection to:",
-      `${config.server}:${config.port}/${config.database}`
-    );
-
-    // Create connection pool and test
-    const pool = new sql.ConnectionPool(config);
-    await pool.connect();
-
-    // Test with a simple query
-    const result = await pool
-      .request()
-      .query("SELECT @@VERSION as version, DB_NAME() as database");
-
-    await pool.close();
+    // Get sample data
+    const sampleUser = await User.findOne().lean();
+    const sampleExpense = await Expense.findOne().populate('driverId', 'name email').populate('vehicleId', 'make model').lean();
+    const sampleCompany = await Company.findOne().lean();
+    const sampleVehicle = await Vehicle.findOne().lean();
 
     res.json({
       success: true,
-      message: "MSSQL connection test successful",
-      connectionInfo: {
-        server: `${config.server}:${config.port}`,
-        database: config.database,
-        version:
-          result.recordset[0]?.version?.substring(0, 50) + "..." || "Unknown",
-        connectedDatabase: result.recordset[0]?.database || "Unknown",
-      },
+      stats,
+      samples: {
+        user: sampleUser,
+        expense: sampleExpense,
+        company: sampleCompany,
+        vehicle: sampleVehicle
+      }
     });
   } catch (error) {
-    console.error("MSSQL connection test failed:", error);
-
-    let errorMessage = "MSSQL connection test failed";
-    if (error.code === "ECONNREFUSED") {
-      errorMessage = "Connection refused - check server address and port";
-    } else if (error.code === "ENOTFOUND") {
-      errorMessage = "Server not found - check server address";
-    } else if (error.code === "ELOGIN") {
-      errorMessage = "Login failed - check username and password";
-    } else if (error.code === "ETIMEOUT") {
-      errorMessage = "Connection timeout - check server availability";
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-
-    res.status(400).json({ error: errorMessage, code: error.code });
-  }
-});
-
-// SMTP Settings Routes
-app.get("/api/settings/smtp", async (req, res) => {
-  try {
-    const defaultSettings = {
-      host: "",
-      port: "587",
-      username: "",
-      password: "",
-      secure: false,
-      fromName: "LS Contract Management",
-      fromEmail: "noreply@listandsell.de",
-    };
-
-    const settings = await getSettings("smtp", defaultSettings);
-    res.json({ settings });
-  } catch (error) {
-    console.error("Error fetching SMTP settings:", error);
-    res.status(500).json({ error: "Failed to fetch SMTP settings" });
-  }
-});
-
-app.put("/api/settings/smtp", async (req, res) => {
-  try {
-    const { host, port, username, password, secure, fromName, fromEmail } =
-      req.body;
-
-    const settingsData = {
-      host: host || "",
-      port: port || "587",
-      username: username || "",
-      password: password || "",
-      secure: Boolean(secure),
-      fromName: fromName || "LS Contract Management",
-      fromEmail: fromEmail || "noreply@listandsell.de",
-    };
-
-    await saveSettings("smtp", settingsData);
-    res.json({
-      message: "SMTP settings saved successfully",
-      settings: settingsData,
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      stack: error.stack
     });
-  } catch (error) {
-    console.error("Error saving SMTP settings:", error);
-    res.status(500).json({ error: "Failed to save SMTP settings" });
   }
 });
 
-// Stripe Settings Routes
-app.get("/api/settings/stripe", async (req, res) => {
-  try {
-    const defaultSettings = {
-      publishableKey: "",
-      secretKey: "",
-      webhookSecret: "",
-      currency: "eur",
-      enabled: false,
-      testMode: true,
-    };
-
-    const settings = await getSettings("stripe", defaultSettings);
-    res.json({ settings });
-  } catch (error) {
-    console.error("Error fetching Stripe settings:", error);
-    res.status(500).json({ error: "Failed to fetch Stripe settings" });
-  }
-});
-
-app.put("/api/settings/stripe", async (req, res) => {
-  try {
-    const {
-      publishableKey,
-      secretKey,
-      webhookSecret,
-      currency,
-      enabled,
-      testMode,
-    } = req.body;
-
-    const settingsData = {
-      publishableKey: publishableKey || "",
-      secretKey: secretKey || "",
-      webhookSecret: webhookSecret || "",
-      currency: currency || "eur",
-      enabled: Boolean(enabled),
-      testMode: Boolean(testMode),
-    };
-
-    await saveSettings("stripe", settingsData);
-    res.json({
-      message: "Stripe settings saved successfully",
-      settings: settingsData,
-    });
-  } catch (error) {
-    console.error("Error saving Stripe settings:", error);
-    res.status(500).json({ error: "Failed to save Stripe settings" });
-  }
-});
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/roles', roleRoutes);
 
 // 404 handler
-app.use("*", (req, res) => {
-  res.status(404).json({ error: `Route ${req.originalUrl} not found` });
+app.use('*', (req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-// Error handler
-app.use((error, req, res, next) => {
-  console.error("Error:", error);
-  res.status(500).json({ error: "Internal server error" });
-});
+// Error handling
+app.use(errorHandler);
 
-// Database connection and server startup
+// Database connection and server start
 const startServer = async () => {
   try {
-    const mongoUri =
-      process.env.MONGODB_URI ||
-      "mongodb://localhost:27017/ls-contract-management";
-    console.log("🔗 Connecting to MongoDB...");
+    await connectDB();
+    console.log('📊 Database connected successfully');
 
-    await mongoose.connect(mongoUri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-
-    console.log("✅ Connected to MongoDB");
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(
-        `🔗 Frontend URL: ${
-          process.env.FRONTEND_URL || "http://localhost:3000"
-        }`
-      );
-      console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-      console.log(`🧪 Test endpoint: http://localhost:${PORT}/api/test`);
-      console.log(`🔐 Demo login: admin@example.com / password123`);
+    app.listen(config.PORT, () => {
+      console.log(`🚀 Server running on port ${config.PORT}`);
+      console.log(`🔗 Environment: ${config.NODE_ENV}`);
+      console.log(`🌐 API available at: http://localhost:${config.PORT}/api`);
+      console.log(`❤️  Health check: http://localhost:${config.PORT}/health`);
     });
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 };
 
-process.on("SIGTERM", () => {
-  console.log("👋 SIGTERM received, shutting down gracefully");
-  process.exit(0);
-});
-
-process.on("SIGINT", () => {
-  console.log("👋 SIGINT received, shutting down gracefully");
-  process.exit(0);
-});
-
 startServer();
+
+module.exports = app;

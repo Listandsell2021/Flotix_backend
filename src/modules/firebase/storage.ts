@@ -1,14 +1,13 @@
 import admin from 'firebase-admin';
 import { config } from '../../config';
+import path from 'path';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
+  const serviceAccountPath = path.resolve(config.FIREBASE_SERVICE_ACCOUNT_PATH);
+
   admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: config.FIREBASE_PROJECT_ID,
-      privateKey: config.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      clientEmail: config.FIREBASE_CLIENT_EMAIL,
-    }),
+    credential: admin.credential.cert(serviceAccountPath),
     storageBucket: config.FIREBASE_STORAGE_BUCKET,
   });
 }

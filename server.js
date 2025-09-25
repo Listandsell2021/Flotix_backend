@@ -5,7 +5,8 @@ const compression = require("compression");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const sql = require("mssql");
 const multer = require("multer");
 const { FirebaseStorageService, initializeFirebase } = require("./firebase-service");
@@ -111,32 +112,173 @@ if (process.env.NODE_ENV === "production") {
   app.use("/api", limiter);
 }
 
-// Basic User Schema
+// FleetFlow User Schema (matching the main project)
 const userSchema = new mongoose.Schema(
   {
-    username: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, default: "employee" },
-    permissions: [String],
-    isActive: { type: Boolean, default: true },
-    lastLogin: Date,
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email'],
+    },
+    passwordHash: {
+      type: String,
+      required: true,
+      minlength: 6,
+    },
+    role: {
+      type: String,
+      enum: ['SUPER_ADMIN', 'ADMIN', 'DRIVER', 'MANAGER', 'VIEWER'],
+      required: true,
+    },
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      required: function () {
+        return this.role !== 'SUPER_ADMIN';
+      },
+    },
+    assignedVehicleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vehicle',
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
+      default: 'ACTIVE',
+    },
+    lastActive: {
+      type: Date,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (doc, ret) => {
+        delete ret.passwordHash;
+        delete ret.__v;
+        return ret;
+      },
+    },
+  }
 );
 
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(12);
-  this.password = await bcrypt.hash(this.password, salt);
+// Indexes
+userSchema.index({ email: 1 });
+userSchema.index({ companyId: 1, role: 1 });
+userSchema.index({ status: 1 });
+userSchema.index({ assignedVehicleId: 1 });
+
+// Pre-save middleware to hash password
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('passwordHash')) return next();
+
+  try {
+    const saltRounds = 12;
+    this.passwordHash = await bcrypt.hash(this.passwordHash, saltRounds);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Method to compare password
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.passwordHash);
+};
+
+// Validation middleware
+userSchema.pre('validate', function (next) {
+  // Super admins should not have companyId
+  if (this.role === 'SUPER_ADMIN' && this.companyId) {
+    this.companyId = undefined;
+  }
   next();
 });
 
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+const User = mongoose.model("User", userSchema);
+
+// JWT Configuration
+const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'your-access-secret-key';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
+const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
+const JWT_DRIVER_ACCESS_EXPIRES_IN = process.env.JWT_DRIVER_ACCESS_EXPIRES_IN || '1h';
+const JWT_DRIVER_REFRESH_EXPIRES_IN = process.env.JWT_DRIVER_REFRESH_EXPIRES_IN || '30d';
+
+// JWT Helper Functions
+const generateTokens = (payload) => {
+  const isDriver = payload.role === 'DRIVER';
+
+  const accessToken = jwt.sign(payload, JWT_ACCESS_SECRET, {
+    expiresIn: isDriver ? JWT_DRIVER_ACCESS_EXPIRES_IN : JWT_ACCESS_EXPIRES_IN,
+  });
+
+  const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
+    expiresIn: isDriver ? JWT_DRIVER_REFRESH_EXPIRES_IN : JWT_REFRESH_EXPIRES_IN,
+  });
+
+  return { accessToken, refreshToken };
 };
 
-const User = mongoose.model("User", userSchema);
+const verifyRefreshToken = (token) => {
+  return jwt.verify(token, JWT_REFRESH_SECRET);
+};
+
+// Authentication middleware
+const authenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access token required'
+      });
+    }
+
+    const token = authHeader.substring(7);
+
+    try {
+      const decoded = jwt.verify(token, JWT_ACCESS_SECRET);
+
+      // Verify user still exists and is active
+      const user = await User.findById(decoded.userId);
+      if (!user || user.status !== 'ACTIVE') {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found or inactive'
+        });
+      }
+
+      // Update last active timestamp
+      user.lastActive = new Date();
+      await user.save();
+
+      req.user = decoded;
+      next();
+    } catch (jwtError) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      });
+    }
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Authentication failed'
+    });
+  }
+};
 
 // Settings Schema for storing configuration data
 const settingsSchema = new mongoose.Schema(
@@ -166,89 +308,165 @@ app.get("/api/test", (req, res) => {
   });
 });
 
-// Login route (basic implementation)
+// Login route (FleetFlow implementation)
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
-    }
-
-    // For demo purposes, create admin user if it doesn't exist
-    let user = await User.findOne({ email });
-
-    if (!user && email === "admin@example.com") {
-      user = new User({
-        username: "admin",
-        email: "admin@example.com",
-        password: "password123",
-        role: "admin",
-        permissions: ["admin_access"],
+      return res.status(400).json({
+        success: false,
+        error: "Email and password are required"
       });
-      await user.save();
-      console.log("✅ Demo admin user created");
     }
 
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
+
+    if (!user || user.status !== 'ACTIVE') {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials or account inactive",
+      });
     }
 
+    // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
 
-    user.lastLogin = new Date();
-    await user.save();
-
-    const userResponse = {
-      _id: user._id,
-      username: user.username,
+    // Generate tokens
+    const tokenPayload = {
+      userId: user._id.toString(),
       email: user.email,
       role: user.role,
-      permissions: user.permissions,
-      isActive: user.isActive,
+      companyId: user.companyId?.toString(),
+    };
+
+    const tokens = generateTokens(tokenPayload);
+
+    // Update last active
+    user.lastActive = new Date();
+    await user.save();
+
+    // Return user data without password
+    const userData = user.toObject();
+    delete userData.passwordHash;
+
+    const response = {
+      user: userData,
+      tokens,
     };
 
     res.json({
+      success: true,
+      data: response,
       message: "Login successful",
-      user: userResponse,
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
+    res.status(500).json({
+      success: false,
+      error: "Login failed"
+    });
   }
 });
 
 // Get current user
-app.get("/api/auth/me", async (req, res) => {
+app.get("/api/auth/me", authenticate, async (req, res) => {
   try {
-    // For demo, return admin user
-    const user = await User.findOne({ email: "admin@example.com" });
+    const user = await User.findById(req.user.userId).populate('companyId', 'name plan status');
+
     if (!user) {
-      return res.status(401).json({ error: "Not authenticated" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    const userResponse = {
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions,
-      isActive: user.isActive,
-    };
-
-    res.json({ user: userResponse });
+    res.json({
+      success: true,
+      data: user,
+      message: "User data retrieved successfully",
+    });
   } catch (error) {
     console.error("Auth check error:", error);
-    res.status(500).json({ error: "Authentication check failed" });
+    res.status(500).json({
+      success: false,
+      error: "Authentication check failed"
+    });
+  }
+});
+
+// Refresh token route
+app.post("/api/auth/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Refresh token is required"
+      });
+    }
+
+    try {
+      // Verify refresh token
+      const decoded = verifyRefreshToken(refreshToken);
+
+      // Check if user still exists and is active
+      const user = await User.findById(decoded.userId);
+      if (!user || user.status !== "ACTIVE") {
+        return res.status(401).json({
+          success: false,
+          message: "User not found or inactive",
+        });
+      }
+
+      // Generate new tokens
+      const tokenPayload = {
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        companyId: user.companyId?.toString(),
+      };
+
+      const tokens = generateTokens(tokenPayload);
+
+      // Update last active
+      user.lastActive = new Date();
+      await user.save();
+
+      res.json({
+        success: true,
+        data: tokens,
+        message: "Token refreshed successfully",
+      });
+    } catch (error) {
+      res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Token refresh failed"
+    });
   }
 });
 
 // Logout route
-app.post("/api/auth/logout", (req, res) => {
-  res.json({ message: "Logout successful" });
+app.post("/api/auth/logout", authenticate, (req, res) => {
+  res.json({
+    success: true,
+    message: "Logged out successfully"
+  });
 });
 
 // ===== SETTINGS ROUTES =====
@@ -625,7 +843,7 @@ const startServer = async () => {
   try {
     const mongoUri =
       process.env.MONGODB_URI ||
-      "mongodb://localhost:27017/ls-contract-management";
+      "mongodb://localhost:27017/fleetflow";
     console.log("🔗 Connecting to MongoDB...");
 
     await mongoose.connect(mongoUri, {
@@ -650,7 +868,7 @@ const startServer = async () => {
       );
       console.log(`🌐 Health check: http://localhost:${PORT}/health`);
       console.log(`🧪 Test endpoint: http://localhost:${PORT}/api/test`);
-      console.log(`🔐 Demo login: admin@example.com / password123`);
+      console.log(`🔐 Login with real FleetFlow users from MongoDB database`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

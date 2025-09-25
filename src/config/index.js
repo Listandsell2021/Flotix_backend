@@ -28,6 +28,8 @@ const config = {
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS?.split(',') || [
     'http://localhost:3000', // Next.js web app
     'http://localhost:8081', // React Native dev server
+    'https://flotix.listandsell.de', // Production frontend
+    'https://www.flotix.listandsell.de', // Production frontend (www)
   ],
 
   // File Upload

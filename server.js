@@ -38,6 +38,9 @@ try {
 
 // Security middleware
 app.use(helmet());
+
+console.log('🌐 CORS Allowed Origins:', config.ALLOWED_ORIGINS);
+
 app.use(cors({
   origin: config.ALLOWED_ORIGINS,
   credentials: true

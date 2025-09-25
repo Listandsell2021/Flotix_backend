@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Role, RoleAssignment } from '../models';
-import { Permission, UserRole } from '@fleetflow/types';
+import { Permission, UserRole } from '../types';
 import { createError } from './errorHandler';
 
 interface AuthenticatedRequest extends Request {

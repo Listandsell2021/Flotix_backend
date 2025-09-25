@@ -25,7 +25,7 @@ import {
   CreateExpenseRequest,
   Expense as IExpense,
   ExpenseFilters,
-} from "@fleetflow/types";
+} from "../types";
 
 const router: ReturnType<typeof Router> = Router();
 
@@ -315,9 +315,13 @@ router.post(
                 expenseData.odometerReading > 0
               ) {
                 newOdometerReading = expenseData.odometerReading;
+                // Set kilometers to the same value as odometer reading
+                expense.kilometers = expenseData.odometerReading;
               } else if (expenseData.kilometers && expenseData.kilometers > 0) {
                 newOdometerReading =
                   vehicle.currentOdometer + expenseData.kilometers;
+                // Set the odometer reading on the expense
+                expense.odometerReading = newOdometerReading;
               }
 
               if (
@@ -326,6 +330,8 @@ router.post(
               ) {
                 vehicle.currentOdometer = newOdometerReading;
                 await vehicle.save();
+                // Re-save expense with updated fields
+                await expense.save();
               }
             }
           } catch (error) {
@@ -470,14 +476,20 @@ router.post(
           // If odometerReading is provided, use it directly as the new total
           if (expenseData.odometerReading && expenseData.odometerReading > 0) {
             newOdometerReading = expenseData.odometerReading;
+            // Set kilometers to the same value as odometer reading
+            expense.kilometers = expenseData.odometerReading;
+            await expense.save();
             console.log(
-              `Setting odometer to provided reading: ${newOdometerReading}`
+              `Setting odometer and kilometers to ${newOdometerReading} km`
             );
           }
           // If only kilometers is provided, add it to current odometer (treating it as distance traveled)
           else if (expenseData.kilometers && expenseData.kilometers > 0) {
             newOdometerReading =
               vehicle.currentOdometer + expenseData.kilometers;
+            // Set the odometer reading on the expense
+            expense.odometerReading = newOdometerReading;
+            await expense.save();
             console.log(
               `Adding ${expenseData.kilometers} km to current odometer ${vehicle.currentOdometer}, new reading: ${newOdometerReading}`
             );
@@ -789,7 +801,7 @@ router.get(
     // Get all expenses matching criteria
     const expenses = await Expense.find(query)
       .populate("driverId", "name email")
-      .populate("vehicleId", "make model year licensePlate type")
+      .populate("vehicleId", "make model year licensePlate type currentOdometer")
       .sort({ date: -1 }); // Sort by date descending
 
     // Generate CSV content
@@ -968,20 +980,18 @@ router.put(
           });
 
           if (vehicle) {
-            // Only update if the new reading is higher than current
-            if (updateData.odometerReading > vehicle.currentOdometer) {
-              const previousVehicleOdometer = vehicle.currentOdometer;
-              vehicle.currentOdometer = updateData.odometerReading;
-              await vehicle.save();
+            // Set kilometers to the same value as odometer reading
+            expense.kilometers = updateData.odometerReading;
+            await expense.save();
 
-              console.log(
-                `Vehicle odometer updated via expense edit: ${vehicle.licensePlate} from ${previousVehicleOdometer} to ${updateData.odometerReading} km`
-              );
-            } else if (updateData.odometerReading < vehicle.currentOdometer) {
-              console.warn(
-                `Warning: Updated expense odometer reading (${updateData.odometerReading}) is lower than vehicle current reading (${vehicle.currentOdometer}). Vehicle not updated.`
-              );
-            }
+            // Update vehicle odometer to the same value
+            const previousVehicleOdometer = vehicle.currentOdometer;
+            vehicle.currentOdometer = updateData.odometerReading;
+            await vehicle.save();
+
+            console.log(
+              `Vehicle odometer and expense kilometers updated: ${vehicle.licensePlate} from ${previousVehicleOdometer} to ${updateData.odometerReading} km`
+            );
           }
         }
       } catch (error) {

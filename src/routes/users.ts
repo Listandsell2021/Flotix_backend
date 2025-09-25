@@ -20,7 +20,7 @@ import type {
   PaginatedResponse,
   CreateUserRequest,
   User as IUser
-} from '@fleetflow/types';
+} from '../types';
 
 const router = Router();
 
@@ -207,7 +207,7 @@ router.get('/',
     const [users, total] = await Promise.all([
       User.find(query)
         .populate('companyId', 'name plan status')
-        .populate('assignedVehicleId', 'licensePlate make model year status')
+        .populate('assignedVehicleId', 'licensePlate make model year status currentOdometer')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -269,7 +269,7 @@ router.get('/:id',
 
     const user = await User.findOne(query)
       .populate('companyId', 'name plan status')
-      .populate('assignedVehicleId', 'licensePlate make model year status');
+      .populate('assignedVehicleId', 'licensePlate make model year status currentOdometer');
     
     if (!user) {
       return res.status(404).json({

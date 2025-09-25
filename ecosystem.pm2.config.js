@@ -1,15 +1,17 @@
 module.exports = {
   apps: [{
     name: 'flotix-backend',
-    script: './server.js',
+    script: 'npm',
+    args: 'start',
+    cwd: './',
     instances: 1,
     exec_mode: 'cluster',
     env: {
-      NODE_ENV: 'development',
+      NODE_ENV: 'production',
       PORT: 3001
     },
-    env_production: {
-      NODE_ENV: 'production',
+    env_development: {
+      NODE_ENV: 'development',
       PORT: 3001
     },
     error_file: './logs/err.log',
@@ -18,9 +20,6 @@ module.exports = {
     time: true,
     watch: false,
     max_memory_restart: '1G',
-    cwd: './',
-    interpreter: 'node',
-    interpreter_args: '',
     autorestart: true,
     max_restarts: 10,
     min_uptime: '10s',

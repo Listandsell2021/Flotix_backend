@@ -7,7 +7,7 @@ import type {
   CompanyStatus,
   ExpenseType,
   ExpenseCategory 
-} from '@fleetflow/types';
+} from '../types';
 
 export const validate = (schema: z.ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {

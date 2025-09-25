@@ -17,7 +17,7 @@ import type {
   ApiResponse,
   PaginatedResponse,
   Company as ICompany
-} from '@fleetflow/types';
+} from '../types';
 
 const router = Router();
 

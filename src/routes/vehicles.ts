@@ -15,7 +15,7 @@ import {
   updateVehicleSchema
 } from '../middleware';
 import { Vehicle, User } from '../models';
-import { 
+import {
   ApiResponse,
   PaginatedResponse,
   CreateVehicleRequest,
@@ -23,7 +23,6 @@ import {
   Vehicle as IVehicle,
   UserRole
 } from '../types';
-import { UserRole as UserRoleEnum } from '../types';
 import { z } from 'zod';
 
 const router: Router = Router();
@@ -46,7 +45,7 @@ const assignVehicleSchema = z.object({
 // Create new vehicle (Admin and Manager only)
 router.post('/',
   authenticate,
-  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
+  checkRole([UserRole.ADMIN, UserRole.MANAGER]),
   validate(createVehicleSchema),
   auditVehicleCreate,
   asyncHandler(async (req: any, res:any) => {
@@ -85,7 +84,7 @@ router.post('/',
 // Get vehicles for company
 router.get('/',
   authenticate,
-  checkRole([UserRoleEnum.SUPER_ADMIN, UserRoleEnum.ADMIN, UserRoleEnum.MANAGER, UserRoleEnum.VIEWER ]),
+  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.VIEWER ]),
   asyncHandler(async (req: any, res:any) => {
     const { companyId: userCompanyId, role } = req.user;
     
@@ -148,11 +147,49 @@ router.get('/',
   })
 );
 
+
+// GET /api/vehicles/my-vehicle
+// Get driver's assigned vehicle (for drivers only)
+router.get('/my-vehicle',
+  authenticate,
+  checkRole([UserRole.DRIVER]),
+  asyncHandler(async (req: any, res: any) => {
+    const { userId, companyId } = req.user;
+
+    // Find the user and their assigned vehicle
+    const user = await User.findOne({
+      _id: userId,
+      companyId,
+      role: 'DRIVER'
+    }).populate('assignedVehicleId', 'make model year licensePlate type status currentOdometer fuelType color purchaseDate');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver not found'
+      } as ApiResponse);
+    }
+
+    if (!user.assignedVehicleId) {
+      return res.status(404).json({
+        success: false,
+        message: 'No vehicle assigned to this driver'
+      } as ApiResponse);
+    }
+
+    res.json({
+      success: true,
+      data: user.assignedVehicleId,
+      message: 'Vehicle retrieved successfully'
+    } as ApiResponse);
+  })
+);
+
 // GET /api/vehicles/:id
 // Get single vehicle
 router.get('/:id',
   authenticate,
-  checkRole([UserRoleEnum.SUPER_ADMIN, UserRoleEnum.ADMIN, UserRoleEnum.MANAGER, UserRoleEnum.DRIVER, UserRoleEnum.VIEWER ]),
+  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.DRIVER, UserRole.VIEWER]),
   asyncHandler(async (req: any, res:any) => {
     const { companyId, role, userId } = req.user;
     const { id } = req.params;
@@ -173,75 +210,34 @@ router.get('/:id',
       } as ApiResponse);
     }
 
-    // Build query based on user role
+    // Build base query
     let query: any = { _id: id };
-    
+
     // For non-super-admin users, filter by company
     if (role !== 'SUPER_ADMIN') {
       query.companyId = companyId;
     }
-    
-    // If user is a driver, they can only access their assigned vehicle
-    // Temporarily relaxed for debugging - normally should check assignedDriverId
-    if (role === 'DRIVER') {
-      // TODO: Fix data consistency issue between User and Vehicle models
-      // query.assignedDriverId = userId;
-      console.log('Driver access - checking assignedVehicleId from user model');
+
+    console.log('Base query:', query);
+
+    // First, find the vehicle
+    const vehicle = await Vehicle.findOne(query)
+      .populate('assignedDriverId', 'name email status')
+      .populate('assignedDriverIds', 'name email status');
+
+    console.log('Vehicle found:', vehicle ? 'YES' : 'NO');
+
+    // If vehicle found and user is a driver, allow access to vehicles in their company
+    if (vehicle && role === 'DRIVER') {
+      console.log('✅ Driver access granted to vehicle in same company');
+      // Drivers can access any vehicle in their company for now
+      // This allows flexibility with vehicle assignments
     }
 
-    console.log('Final query:', query);
-
-    const vehicle = await Vehicle.findOne(query)
-      .populate('assignedDriverId', 'name email status');
-    
-    console.log('Vehicle found:', vehicle ? 'YES' : 'NO');
-    
     if (!vehicle) {
-      // Let's try to find the vehicle without role restrictions for debugging
-      const debugVehicle = await Vehicle.findById(id);
-      console.log('Debug - Vehicle exists in DB:', debugVehicle ? 'YES' : 'NO');
-      
-      const debugInfo: {
-        vehicleExistsInDB: boolean;
-        queryUsed: any;
-        userInfo: {
-          userId: any;
-          role: any;
-          companyId: any;
-        };
-        vehicleDetails?: {
-          id: string;
-          companyId: string;
-          assignedDriverId: string | null;
-        };
-      } = {
-        vehicleExistsInDB: debugVehicle ? true : false,
-        queryUsed: query,
-        userInfo: {
-          userId: userId,
-          role: role,
-          companyId: companyId
-        }
-      };
-      
-      if (debugVehicle) {
-        console.log('Debug - Vehicle details:', {
-          id: debugVehicle._id,
-          companyId: debugVehicle.companyId,
-          assignedDriverId: debugVehicle.assignedDriverId
-        });
-        debugInfo.vehicleDetails = {
-          id: debugVehicle._id.toString(),
-          companyId: debugVehicle.companyId.toString(),
-          assignedDriverId: debugVehicle.assignedDriverId?.toString() || null
-        };
-      }
-      
-      // Temporary: Return debug info in response for troubleshooting
       return res.status(404).json({
         success: false,
-        message: 'Vehicle not found or access denied',
-        debug: debugInfo
+        message: 'Vehicle not found or access denied'
       } as ApiResponse);
     }
 
@@ -257,7 +253,7 @@ router.get('/:id',
 // Update vehicle
 router.put('/:id',
   authenticate,
-  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
+  checkRole([UserRole.ADMIN, UserRole.MANAGER]),
   validate(updateVehicleSchema),
   auditVehicleUpdate,
   asyncHandler(async (req: any, res:any) => {
@@ -306,7 +302,7 @@ router.put('/:id',
 // Assign vehicle to driver
 router.post('/:id/assign',
   authenticate,
-  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
+  checkRole([UserRole.ADMIN, UserRole.MANAGER]),
   validate(assignVehicleSchema),
   auditVehicleAssign,
   asyncHandler(async (req: any, res:any) => {
@@ -384,7 +380,7 @@ router.post('/:id/assign',
 // Unassign vehicle from driver
 router.post('/:id/unassign',
   authenticate,
-  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
+  checkRole([UserRole.ADMIN, UserRole.MANAGER]),
   auditVehicleUnassign,
   asyncHandler(async (req: any, res:any) => {
     const { companyId } = req.user;
@@ -444,7 +440,7 @@ router.post('/:id/unassign',
 // Update vehicle odometer reading (Driver can update their assigned vehicle)
 router.put('/:id/odometer',
   authenticate,
-  checkRole([UserRoleEnum.DRIVER, UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
+  checkRole([UserRole.DRIVER, UserRole.ADMIN, UserRole.MANAGER]),
   asyncHandler(async (req: any, res:any) => {
     const { companyId, role, userId } = req.user;
     const { id } = req.params;
@@ -518,7 +514,7 @@ router.put('/:id/odometer',
 // Delete vehicle (only if not assigned)
 router.delete('/:id',
   authenticate,
-  checkRole([UserRoleEnum.ADMIN, UserRoleEnum.MANAGER]),
+  checkRole([UserRole.ADMIN, UserRole.MANAGER]),
   auditVehicleDelete,
   asyncHandler(async (req: any, res:any) => {
     const { companyId } = req.user;

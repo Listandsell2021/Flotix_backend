@@ -431,6 +431,21 @@ router.post(
       hasVehicle: !!targetDriver.assignedVehicleId,
     });
 
+    // Validate odometer reading against vehicle's current odometer
+    if (targetDriver.assignedVehicleId && expenseData.odometerReading) {
+      const vehicle = await Vehicle.findOne({
+        _id: targetDriver.assignedVehicleId,
+        companyId,
+      });
+
+      if (vehicle && expenseData.odometerReading < vehicle.currentOdometer) {
+        throw createError(
+          `Odometer reading (${expenseData.odometerReading} km) cannot be less than vehicle's current reading (${vehicle.currentOdometer} km). Please enter the current odometer reading.`,
+          400
+        );
+      }
+    }
+
     const expenseDataWithVehicle = {
       ...expenseData,
       driverId,
@@ -1072,6 +1087,152 @@ router.delete(
       success: true,
       message: "Expense deleted successfully",
     } as ApiResponse);
+  })
+);
+
+// POST /api/expenses/signed-url
+// Generate signed URL for direct file upload
+router.post(
+  "/signed-url",
+  authenticate,
+  checkRole([UserRole.DRIVER, UserRole.ADMIN, UserRole.MANAGER]),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { filename, contentType } = req.body;
+    const { userId, companyId } = (req as any).user;
+
+    if (!filename || !contentType) {
+      return res.status(400).json({
+        success: false,
+        message: "Filename and contentType are required",
+      } as ApiResponse);
+    }
+
+    // Validate content type
+    if (!config.ALLOWED_FILE_TYPES.includes(contentType as any)) {
+      return res.status(400).json({
+        success: false,
+        message: `Content type ${contentType} not allowed. Allowed types: ${config.ALLOWED_FILE_TYPES.join(', ')}`,
+      } as ApiResponse);
+    }
+
+    try {
+      const { uploadUrl, publicUrl, filePath } = await FirebaseStorageService.generateUploadSignedUrl(
+        filename,
+        contentType,
+        userId,
+        companyId,
+        15 // 15 minutes expiry
+      );
+
+      res.json({
+        success: true,
+        data: {
+          uploadUrl,
+          publicUrl,
+          filePath,
+          expiresIn: 15 * 60, // seconds
+        },
+        message: "Signed URL generated successfully",
+      } as ApiResponse);
+    } catch (error) {
+      console.error("Signed URL generation error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate signed URL",
+      } as ApiResponse);
+    }
+  })
+);
+
+// POST /api/expenses/upload-complete
+// Called by mobile app after successful upload to make file public
+router.post(
+  "/upload-complete",
+  authenticate,
+  checkRole([UserRole.DRIVER, UserRole.ADMIN, UserRole.MANAGER]),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { filePath, publicUrl } = req.body;
+    const { userId, companyId } = (req as any).user;
+
+    if (!filePath || !publicUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "File path and public URL are required",
+      } as ApiResponse);
+    }
+
+    // Verify the file path belongs to the user's company
+    if (!filePath.includes(`receipts/${companyId}/${userId}/`)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied to this file",
+      } as ApiResponse);
+    }
+
+    try {
+      // Make the uploaded file public
+      await FirebaseStorageService.makeFilePublic(filePath);
+
+      console.log(`✅ Made file public: ${filePath}`);
+
+      res.json({
+        success: true,
+        data: {
+          filePath,
+          publicUrl,
+          isPublic: true
+        },
+        message: "File made public successfully",
+      } as ApiResponse);
+    } catch (error) {
+      console.error("Error making file public:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to make file public",
+      } as ApiResponse);
+    }
+  })
+);
+
+// POST /api/expenses/make-public
+// Legacy endpoint - Make a file public after upload (if needed)
+router.post(
+  "/make-public",
+  authenticate,
+  checkRole([UserRole.DRIVER, UserRole.ADMIN, UserRole.MANAGER]),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { filePath } = req.body;
+    const { userId, companyId } = (req as any).user;
+
+    if (!filePath) {
+      return res.status(400).json({
+        success: false,
+        message: "File path is required",
+      } as ApiResponse);
+    }
+
+    // Verify the file path belongs to the user's company
+    if (!filePath.includes(`receipts/${companyId}/`)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied to this file",
+      } as ApiResponse);
+    }
+
+    try {
+      await FirebaseStorageService.makeFilePublic(filePath);
+
+      res.json({
+        success: true,
+        message: "File made public successfully",
+      } as ApiResponse);
+    } catch (error) {
+      console.error("Make file public error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to make file public",
+      } as ApiResponse);
+    }
   })
 );
 

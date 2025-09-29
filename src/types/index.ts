@@ -325,6 +325,12 @@ export interface LoginRequest {
 export interface LoginResponse {
   user: Omit<User, 'passwordHash'>;
   tokens: AuthTokens;
+  driverData?: {
+    assignedVehicle?: Vehicle;
+    company?: Company;
+    recentExpenses?: any[];
+    expenseStats?: any;
+  };
 }
 
 // Filter/Search Types

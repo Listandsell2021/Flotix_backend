@@ -22,24 +22,24 @@ You are a receipt OCR system. Analyze the receipt image and extract the followin
 
 {
   "merchant": "string | null",
-  "date": "YYYY-MM-DD | null", 
-  "currency": "ISO 4217 code (e.g., USD, EUR) | null",
+  "date": "dd.mm.yyyy | null", 
+  "currency": "EUR | null",
   "amount": "number | null",
   "confidence": "number between 0 and 1"
 }
 
 Instructions:
 - Extract the total amount paid (not individual line items)
-- Date should be in YYYY-MM-DD format
-- Currency should be ISO 4217 code (USD, EUR, etc.)
+- Date should be in dd.mm.yyyy format
+- Currency should be EUR only
 - Confidence should reflect how certain you are about the extracted data (1.0 = very confident, 0.0 = not confident)
 - If any field cannot be determined, set it to null
 - Return ONLY valid JSON, no additional text or formatting
 
 Common receipt patterns to look for:
 - Total, Amount Due, Balance Due, Grand Total
-- Date formats: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD
-- Currency symbols: $, €, £, ¥
+- Date formats: DD/MM/YYYY, dd.mm.yyyy, MM/DD/YYYY (convert all to dd.mm.yyyy)
+- All currency symbols will be converted to EUR
 - Merchant name is usually at the top of the receipt
   `;
 
@@ -171,7 +171,11 @@ Common receipt patterns to look for:
       oneWeekFromNow.setDate(now.getDate() + 7);
       
       if (date >= twoYearsAgo && date <= oneWeekFromNow) {
-        return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        // Convert to dd.mm.yyyy format
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
       }
     } catch (error) {
       console.warn('Invalid date format:', dateString);
@@ -184,23 +188,23 @@ Common receipt patterns to look for:
     if (typeof currency === 'string' && currency.trim().length > 0) {
       const cleanCurrency = currency.trim().toUpperCase();
       
-      // Common currency codes
-      const validCurrencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY'];
-      
+      // Only EUR currency allowed
+      const validCurrencies = ['EUR'];
+
       if (validCurrencies.includes(cleanCurrency)) {
         return cleanCurrency;
       }
-      
-      // Handle currency symbols
+
+      // Handle currency symbols - map all to EUR
       const currencyMap: Record<string, string> = {
-        '$': 'USD',
+        '$': 'EUR',
         '€': 'EUR',
-        '£': 'GBP',
-        '¥': 'JPY',
-        '¢': 'USD',
+        '£': 'EUR',
+        '¥': 'EUR',
+        '¢': 'EUR',
       };
-      
-      return currencyMap[cleanCurrency] || cleanCurrency;
+
+      return currencyMap[cleanCurrency] || 'EUR';
     }
     return null;
   }

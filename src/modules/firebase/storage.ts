@@ -1,13 +1,14 @@
 import admin from 'firebase-admin';
 import { config } from '../../config';
-import path from 'path';
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
-  const serviceAccountPath = path.resolve(config.FIREBASE_SERVICE_ACCOUNT_PATH);
-
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccountPath),
+    credential: admin.credential.cert({
+      projectId: config.FIREBASE_PROJECT_ID,
+      privateKey: config.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      clientEmail: config.FIREBASE_CLIENT_EMAIL,
+    }),
     storageBucket: config.FIREBASE_STORAGE_BUCKET,
   });
 }
@@ -30,10 +31,13 @@ export class FirebaseStorageService {
       // Create a path with user and company organization
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const fileExtension = mimeType.includes('png') ? 'png' : 'jpg';
-      const filePath = `receipts/${companyId}/${userId}/${timestamp}-${fileName}.${fileExtension}`;
-      
+
+      // Remove existing extension from fileName if present to avoid duplication
+      const baseName = fileName.replace(/\.(jpg|jpeg|png)$/i, '');
+      const filePath = `receipts/${companyId}/${userId}/${timestamp}-${baseName}.${fileExtension}`;
+
       const file = bucket.file(filePath);
-      
+
       // Upload the file
       await file.save(buffer, {
         metadata: {
@@ -49,10 +53,10 @@ export class FirebaseStorageService {
 
       // Make the file publicly readable
       await file.makePublic();
-      
+
       // Return the public URL
       const publicUrl = `https://storage.googleapis.com/${config.FIREBASE_STORAGE_BUCKET}/${filePath}`;
-      
+
       console.log(`Receipt uploaded successfully: ${publicUrl}`);
       return publicUrl;
     } catch (error) {
@@ -104,7 +108,7 @@ export class FirebaseStorageService {
   ): Promise<string> {
     try {
       const file = bucket.file(filePath);
-      
+
       const options = {
         version: 'v4' as const,
         action: 'read' as const,
@@ -116,6 +120,68 @@ export class FirebaseStorageService {
     } catch (error) {
       console.error('Firebase signed URL error:', error);
       throw new Error('Failed to generate signed URL');
+    }
+  }
+
+  /**
+   * Generate a signed URL for direct upload to Firebase Storage
+   * Note: Files uploaded via signed URLs will need to be made public separately
+   */
+  static async generateUploadSignedUrl(
+    fileName: string,
+    contentType: string,
+    userId: string,
+    companyId: string,
+    expiresInMinutes: number = 15
+  ): Promise<{ uploadUrl: string; publicUrl: string; filePath: string }> {
+    try {
+      // Create a path with user and company organization
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileExtension = contentType.includes('png') ? 'png' : 'jpg';
+
+      // Remove existing extension from fileName if present to avoid duplication
+      const baseName = fileName.replace(/\.(jpg|jpeg|png)$/i, '');
+      const filePath = `receipts/${companyId}/${userId}/${timestamp}-${baseName}.${fileExtension}`;
+
+      const file = bucket.file(filePath);
+
+      // Generate signed URL for upload
+      // Note: extensionHeaders are NOT included because the mobile app doesn't send them
+      // This was causing "MalformedSecurityHeader" errors
+      const options = {
+        version: 'v4' as const,
+        action: 'write' as const,
+        expires: Date.now() + expiresInMinutes * 60 * 1000,
+        contentType: contentType,
+      };
+
+      const [uploadUrl] = await file.getSignedUrl(options);
+      const publicUrl = `https://storage.googleapis.com/${config.FIREBASE_STORAGE_BUCKET}/${filePath}`;
+
+      console.log(`Generated upload signed URL for: ${filePath}`);
+
+      return {
+        uploadUrl,
+        publicUrl,
+        filePath,
+      };
+    } catch (error) {
+      console.error('Firebase upload signed URL error:', error);
+      throw new Error('Failed to generate upload signed URL');
+    }
+  }
+
+  /**
+   * Make a file public after upload via signed URL
+   */
+  static async makeFilePublic(filePath: string): Promise<void> {
+    try {
+      const file = bucket.file(filePath);
+      await file.makePublic();
+      console.log(`File made public: ${filePath}`);
+    } catch (error) {
+      console.error('Error making file public:', error);
+      throw new Error('Failed to make file public');
     }
   }
 

@@ -100,7 +100,7 @@ export const createExpenseSchema = z.object({
     driverId: z.string().optional(), // Optional: used when admin creates expense for a driver
     type: z.enum(['FUEL', 'MISC']),
     amountFinal: z.number().min(0, 'Amount must be positive').max(100000, 'Amount too large'),
-    currency: z.string().regex(/^[A-Z]{3}$/, 'Currency must be a valid 3-letter ISO code'),
+    currency: z.enum(['EUR'], { errorMap: () => ({ message: 'Currency must be EUR' }) }),
     receiptUrl: z.string().url('Invalid receipt URL'),
     merchant: z.string().max(200, 'Merchant name too long').optional(),
     category: z.enum(['TOLL', 'PARKING', 'REPAIR', 'OTHER']).optional(),

@@ -10,7 +10,7 @@ import {
   auditLog,
   getClientIP,
 } from "../middleware";
-import { User, AuditLog } from "../models";
+import { User, AuditLog, Vehicle } from "../models";
 import { AuditAction, AuditModule, AuditStatus } from "../types";
 import type {
   LoginRequest,
@@ -133,10 +133,42 @@ router.post(
     const userData = user.toObject();
     delete userData.passwordHash;
 
-    const response: LoginResponse = {
+    let response: LoginResponse = {
       user: userData,
       tokens,
     };
+
+    // For drivers, include their assigned vehicle and related data
+    if (user.role === 'DRIVER') {
+      console.log('🚗 Driver login - fetching driver data...');
+
+      try {
+        // Vehicle model is already imported at the top
+
+        let driverData = null;
+
+        if (user.assignedVehicleId) {
+          console.log('Driver has assigned vehicle:', user.assignedVehicleId);
+
+          const vehicle = await Vehicle.findById(user.assignedVehicleId);
+          if (vehicle) {
+            driverData = { assignedVehicle: vehicle };
+            console.log('✅ Vehicle data added to driver login response');
+          } else {
+            console.log('❌ Assigned vehicle not found');
+          }
+        } else {
+          console.log('Driver has no assigned vehicle');
+        }
+
+        // Add driver data to response
+        response.driverData = driverData;
+
+      } catch (error) {
+        console.error('Error fetching driver data during login:', error);
+        // Don't fail login if driver data fetch fails
+      }
+    }
 
     res.json({
       success: true,
@@ -201,12 +233,12 @@ router.get(
   "/me",
   authenticate,
   asyncHandler(async (req: any, res) => {
-    const user = await User.findById(req.user.userId).populate(
-      "companyId",
-      "name plan status"
-    );
+    const { user } = req as any;
+    const userDoc = await User.findById(user.userId)
+      .populate('companyId', 'name plan status')
+      .populate('assignedVehicleId', 'make model year licensePlate type status currentOdometer');
 
-    if (!user) {
+    if (!userDoc) {
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -215,8 +247,8 @@ router.get(
 
     res.json({
       success: true,
-      data: user,
-      message: "User data retrieved successfully",
+      data: userDoc,
+      message: "User profile retrieved successfully",
     } as ApiResponse);
   })
 );

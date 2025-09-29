@@ -39,7 +39,13 @@ const expenseSchema = new Schema<ExpenseDocument>(
       type: String,
       required: true,
       default: 'EUR',
-      match: [/^[A-Z]{3}$/, 'Currency must be a valid 3-letter ISO code'],
+      enum: ['EUR'],
+      validate: {
+        validator: function(v: string) {
+          return v === 'EUR';
+        },
+        message: 'Currency must be EUR'
+      }
     },
     receiptUrl: {
       type: String,

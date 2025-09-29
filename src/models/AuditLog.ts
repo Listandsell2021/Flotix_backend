@@ -7,7 +7,7 @@ import type {
   UserRole 
 } from '../types';
 
-export interface AuditLogDocument extends IAuditLog, Document {}
+export interface AuditLogDocument extends Omit<IAuditLog, '_id'>, Document {}
 
 const auditLogSchema = new Schema<AuditLogDocument>(
   {
@@ -17,8 +17,7 @@ const auditLogSchema = new Schema<AuditLogDocument>(
       required: true,
     },
     userId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
       required: true,
     },
     role: {
@@ -27,8 +26,7 @@ const auditLogSchema = new Schema<AuditLogDocument>(
       required: true,
     },
     companyId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Company',
+      type: String,
       required: function (this: AuditLogDocument) {
         return this.role !== 'SUPER_ADMIN';
       },

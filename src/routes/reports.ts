@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { 
   authenticate, 
@@ -10,8 +10,8 @@ import {
   asyncHandler
 } from '../middleware';
 import { Expense } from '../models';
-import type { 
-  UserRole, 
+import { UserRole } from '../types';
+import type {
   ApiResponse,
   ReportData,
   ReportFilters,
@@ -23,8 +23,8 @@ const router = Router();
 // GET /api/reports/dashboard
 router.get('/dashboard',
   authenticate,
-  checkRole(['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'VIEWER']),
-  asyncHandler(async (req: any, res) => {
+  checkRole([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER, UserRole.VIEWER]),
+  asyncHandler(async (req: any, res: Response) => {
     const { companyId, role } = req.user;
     const now = new Date();
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -97,9 +97,9 @@ router.get('/dashboard',
 // GET /api/reports/summary
 router.get('/summary',
   authenticate,
-  checkRole(['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'VIEWER']),
+  checkRole([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER, UserRole.VIEWER]),
   validate(reportFiltersSchema),
-  asyncHandler(async (req: any, res) => {
+  asyncHandler(async (req: any, res: Response) => {
     const { companyId } = req.user;
     const filters: ReportFilters = req.query;
     

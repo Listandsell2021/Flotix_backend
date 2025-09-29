@@ -1,3 +1,4 @@
+import { Response } from 'express';
 import { Router } from 'express';
 import { 
   authenticate, 
@@ -8,21 +9,21 @@ import {
   asyncHandler
 } from '../middleware';
 import { AuditLog } from '../models';
-import type { 
-  UserRole, 
+import type {
   ApiResponse,
   PaginatedResponse,
   AuditLog as IAuditLog
 } from '../types';
+import { UserRole } from '../types';
 
 const router = Router();
 
 // GET /api/audit
 router.get('/',
   authenticate,
-  checkRole(['ADMIN', 'SUPER_ADMIN', 'MANAGER']),
+  checkRole([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER]),
   validate(paginationSchema),
-  asyncHandler(async (req: any, res) => {
+  asyncHandler(async (req: any, res: Response) => {
     const { role, companyId } = req.user;
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);
@@ -31,7 +32,7 @@ router.get('/',
     // Build query based on role
     let query: any = {};
 
-    if (role === 'ADMIN' || role === 'MANAGER') {
+    if (role === UserRole.ADMIN || role === UserRole.MANAGER) {
       query.companyId = companyId;
     }
 

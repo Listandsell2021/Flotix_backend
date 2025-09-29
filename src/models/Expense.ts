@@ -1,28 +1,26 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import type { Expense as IExpense, ExpenseType, ExpenseCategory } from '../types';
+import type { Expense as IExpense } from '../types';
+import { ExpenseType, ExpenseCategory } from '../types';
 import { config } from '../config';
 
-export interface ExpenseDocument extends IExpense, Document {}
+export interface ExpenseDocument extends Omit<IExpense, '_id'>, Document {}
 
 const expenseSchema = new Schema<ExpenseDocument>(
   {
     driverId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
       required: true,
     },
     companyId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Company',
+      type: String,
       required: true,
     },
     vehicleId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Vehicle',
+      type: String,
     },
     type: {
       type: String,
-      enum: ['FUEL', 'MISC'],
+      enum: Object.values(ExpenseType),
       required: true,
     },
     amountExtracted: {
@@ -54,9 +52,9 @@ const expenseSchema = new Schema<ExpenseDocument>(
     },
     category: {
       type: String,
-      enum: ['TOLL', 'PARKING', 'REPAIR', 'OTHER'],
+      enum: Object.values(ExpenseCategory),
       required: function (this: ExpenseDocument) {
-        return this.type === 'MISC';
+        return this.type === ExpenseType.MISC;
       },
     },
     notes: {
@@ -141,8 +139,8 @@ expenseSchema.virtual('vehicle', {
 // Pre-validate middleware
 expenseSchema.pre('validate', function (next) {
   // Ensure MISC expenses have a category
-  if (this.type === 'MISC' && !this.category) {
-    this.category = 'OTHER';
+  if (this.type === ExpenseType.MISC && !this.category) {
+    this.category = ExpenseCategory.OTHER;
   }
   
   // Ensure date is not in the future

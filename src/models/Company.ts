@@ -1,8 +1,9 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import type { Company as ICompany, CompanyStatus, CompanyPlan } from '../types';
+import type { Company as ICompany } from '../types';
+import { CompanyStatus, CompanyPlan } from '../types';
 import { config } from '../config';
 
-export interface CompanyDocument extends ICompany, Document {}
+export interface CompanyDocument extends Omit<ICompany, '_id'>, Document {}
 
 const companySchema = new Schema<CompanyDocument>(
   {
@@ -14,13 +15,13 @@ const companySchema = new Schema<CompanyDocument>(
     },
     plan: {
       type: String,
-      enum: ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-      default: 'STARTER',
+      enum: Object.values(CompanyPlan),
+      default: CompanyPlan.STARTER,
     },
     status: {
       type: String,
-      enum: ['ACTIVE', 'SUSPENDED', 'CANCELLED'],
-      default: 'ACTIVE',
+      enum: Object.values(CompanyStatus),
+      default: CompanyStatus.ACTIVE,
     },
     driverLimit: {
       type: Number,

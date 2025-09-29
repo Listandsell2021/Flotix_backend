@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { 
   authenticate, 
   checkRole,
@@ -12,8 +12,8 @@ import {
   createError
 } from '../middleware';
 import { Company, User } from '../models';
-import { UserRole } from '../types';
-import type {
+import type { 
+  UserRole, 
   ApiResponse,
   PaginatedResponse,
   Company as ICompany
@@ -24,10 +24,10 @@ const router = Router();
 // POST /api/companies
 router.post('/',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN]),
+  checkRole(['SUPER_ADMIN']),
   validate(createCompanySchema),
   auditCompanyCreate,
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const companyData = req.body;
 
     const company = new Company(companyData);
@@ -44,9 +44,9 @@ router.post('/',
 // GET /api/companies
 router.get('/',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN]),
+  checkRole(['SUPER_ADMIN']),
   validate(paginationSchema),
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
@@ -81,8 +81,8 @@ router.get('/',
 // Get company details (Super Admin can access any, others only their own)
 router.get('/:id',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.DRIVER, UserRole.MANAGER, UserRole.VIEWER]),
-  asyncHandler(async (req: any, res: Response) => {
+  checkRole(['SUPER_ADMIN', 'ADMIN', 'DRIVER', 'MANAGER', 'VIEWER']),
+  asyncHandler(async (req: any, res) => {
     const { id } = req.params;
     const { role, companyId: userCompanyId } = req.user;
 
@@ -234,10 +234,10 @@ router.get('/:id',
 // PUT /api/companies/:id
 router.put('/:id',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN]),
+  checkRole(['SUPER_ADMIN']),
   validate(updateCompanySchema),
   auditCompanyUpdate,
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { id } = req.params;
     const updateData = req.body;
 

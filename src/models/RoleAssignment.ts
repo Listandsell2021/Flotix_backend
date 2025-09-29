@@ -11,15 +11,18 @@ export interface RoleAssignmentDocument extends Document {
 
 const RoleAssignmentSchema = new Schema<RoleAssignmentDocument>({
   userId: {
-    type: String,
+    type: Schema.Types.ObjectId,
+    ref: 'User',
     required: true
   },
   roleId: {
-    type: String,
+    type: Schema.Types.ObjectId,
+    ref: 'Role',
     required: true
   },
   assignedBy: {
-    type: String,
+    type: Schema.Types.ObjectId,
+    ref: 'User',
     required: true
   },
   assignedAt: {

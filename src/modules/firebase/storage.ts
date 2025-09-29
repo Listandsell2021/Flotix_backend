@@ -204,7 +204,7 @@ export class FirebaseStorageService {
 
     // Check file type
     const allowedTypes = config.ALLOWED_FILE_TYPES;
-    if (!allowedTypes.includes(mimeType as any)) {
+    if (!allowedTypes.includes(mimeType)) {
       return {
         valid: false,
         error: `File type ${mimeType} not allowed. Allowed types: ${allowedTypes.join(', ')}`,

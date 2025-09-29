@@ -14,27 +14,43 @@ The new `server.js` file provides a production-ready entry point that runs your 
 
 ## Quick Start
 
-### Option 1: Using server.js (Recommended for Production)
+### Option 1: Using Compiled JavaScript (Fastest - Recommended for Production)
 ```bash
 # On your server
 npm install
-npm run start:server
+npm run build       # Compile TypeScript to JavaScript
+npm run start:server # Start server.js (uses compiled JS from dist/)
 ```
 
-### Option 2: Direct node command
+### Option 2: Direct node command with compiled JavaScript
 ```bash
 # On your server
 npm install
-node server.js
+npm run build       # Compile TypeScript to JavaScript
+node server.js      # Run compiled server directly
 ```
 
-### Option 3: With PM2 (Best for Production)
+### Option 3: Direct compiled JavaScript (No wrapper)
+```bash
+# On your server
+npm install
+npm run build       # Compile TypeScript to JavaScript
+npm run start:prod  # Run dist/index.js directly
+```
+
+### Option 4: With PM2 (Best for Production)
 ```bash
 # Install PM2
 npm install -g pm2
 
-# Start with PM2
+# Build first
+npm run build
+
+# Start with PM2 (compiled version)
 pm2 start server.js --name "flotix-backend"
+
+# OR start dist/index.js directly
+pm2 start dist/index.js --name "flotix-backend"
 
 # Save and setup auto-start
 pm2 save
@@ -71,11 +87,17 @@ ALLOWED_ORIGINS=https://flotix.listandsell.de,http://localhost:3000,http://local
 
 ## How It Works
 
-1. **server.js** checks for required dependencies and TypeScript files
-2. **Automatically installs tsx** if not present
-3. **Validates environment variables** before starting
-4. **Runs your TypeScript backend** using tsx (same as `npm run start`)
-5. **Handles graceful shutdown** and error recovery
+**With Compiled JavaScript (Recommended):**
+1. **server.js** checks for compiled JavaScript files in dist/
+2. **Validates environment variables** before starting
+3. **Runs compiled JavaScript** directly with Node.js (fastest performance)
+4. **Handles graceful shutdown** and error recovery
+
+**Performance Benefits:**
+- ✅ **Faster startup** - No TypeScript compilation at runtime
+- ✅ **Lower memory usage** - No tsx runtime overhead
+- ✅ **Better performance** - Optimized JavaScript execution
+- ✅ **Production ready** - Standard Node.js deployment
 
 ## Features
 

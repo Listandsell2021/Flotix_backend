@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import {
   authenticate,
   generateTokens,
@@ -26,7 +26,7 @@ const router = Router();
 router.post(
   "/login",
   validate(loginSchema),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req, res) => {
     const { email, password }: LoginRequest = req.body;
 
     // Find user by email
@@ -131,10 +131,10 @@ router.post(
 
     // Return user data without password
     const userData = user.toObject();
-    const { passwordHash, ...userDataWithoutPassword } = userData;
+    delete userData.passwordHash;
 
     let response: LoginResponse = {
-      user: userDataWithoutPassword,
+      user: userData,
       tokens,
     };
 
@@ -145,7 +145,7 @@ router.post(
       try {
         // Vehicle model is already imported at the top
 
-        let driverData: { assignedVehicle?: any; company?: any; recentExpenses?: any[]; expenseStats?: any; } | undefined;
+        let driverData = null;
 
         if (user.assignedVehicleId) {
           console.log('Driver has assigned vehicle:', user.assignedVehicleId);
@@ -182,7 +182,7 @@ router.post(
 router.post(
   "/refresh",
   validate(refreshTokenSchema),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req, res) => {
     const { refreshToken } = req.body;
 
     try {
@@ -232,7 +232,7 @@ router.post(
 router.get(
   "/me",
   authenticate,
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { user } = req as any;
     const userDoc = await User.findById(user.userId)
       .populate('companyId', 'name plan status')
@@ -261,11 +261,11 @@ router.post(
     action: AuditAction.LOGOUT,
     module: AuditModule.AUTH,
     getReferenceIds: (req) => ({
-      userId: req.user?.userId || '',
+      userId: req.user?.userId,
     }),
     getDetails: (req) => `User logout: ${req.user?.email}`,
   }),
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req, res) => {
     // In a more sophisticated setup, you might maintain a blacklist of tokens
     // For now, we'll just return success since JWT tokens are stateless
     res.json({

@@ -1,30 +1,13 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import type { Vehicle as IVehicle } from '../types';
-import { VehicleType, VehicleStatus } from '../types';
+import type { Vehicle as IVehicle, VehicleType, VehicleStatus } from '../types';
 
-export interface VehicleDocument extends Omit<Document, 'model'> {
-  companyId: string;
-  make: string;
-  model: string;
-  year: number;
-  licensePlate: string;
-  vin?: string;
-  type: VehicleType;
-  status: VehicleStatus;
-  currentOdometer: number;
-  assignedDriverId?: string;
-  assignedDriverIds?: string[];
-  fuelType?: string;
-  color?: string;
-  purchaseDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export interface VehicleDocument extends IVehicle, Document {}
 
 const vehicleSchema = new Schema<VehicleDocument>(
   {
     companyId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'Company',
       required: true,
     },
     make: {
@@ -60,14 +43,14 @@ const vehicleSchema = new Schema<VehicleDocument>(
     },
     type: {
       type: String,
-      enum: Object.values(VehicleType),
+      enum: ['CAR', 'TRUCK', 'VAN', 'MOTORCYCLE'],
       required: true,
     },
     status: {
       type: String,
-      enum: Object.values(VehicleStatus),
+      enum: ['ACTIVE', 'MAINTENANCE', 'RETIRED'],
       required: true,
-      default: VehicleStatus.ACTIVE,
+      default: 'ACTIVE',
     },
     currentOdometer: {
       type: Number,
@@ -176,12 +159,12 @@ vehicleSchema.pre('save', async function (next) {
     }
     
     // If assignedDriverIds is modified and has drivers, set first as primary
-    if (this.isModified('assignedDriverIds') && this.assignedDriverIds && this.assignedDriverIds.length > 0) {
+    if (this.isModified('assignedDriverIds') && this.assignedDriverIds?.length > 0) {
       this.assignedDriverId = this.assignedDriverIds[0];
     }
     
     // Clear assignedDriverId if no drivers
-    if (this.assignedDriverIds && this.assignedDriverIds.length === 0) {
+    if (this.assignedDriverIds?.length === 0) {
       this.assignedDriverId = undefined;
     }
   } catch (error) {

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { 
   authenticate, 
   checkRole, 
@@ -14,8 +14,8 @@ import {
   createError
 } from '../middleware';
 import { User, Company, Vehicle, RoleAssignment } from '../models';
-import { UserRole, UserStatus } from '../types';
-import type {
+import type { 
+  UserRole, 
   ApiResponse,
   PaginatedResponse,
   CreateUserRequest,
@@ -28,10 +28,10 @@ const router = Router();
 // Create user (Super Admin creates Admins, Admin creates Drivers)
 router.post('/',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
   validate(createUserSchema),
   auditUserCreate,
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const userData: CreateUserRequest = req.body;
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
 
@@ -149,9 +149,9 @@ router.post('/',
 // Get users (filtered by role and company access)
 router.get('/',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.VIEWER]),
+  checkRole(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'VIEWER']),
   validate(paginationSchema),
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -249,9 +249,9 @@ router.get('/',
 // Get single user
 router.get('/:id',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.VIEWER]),
+  checkRole(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'VIEWER']),
   checkCompanyAccess,
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
     const { id } = req.params;
 
@@ -290,10 +290,10 @@ router.get('/:id',
 // Update user
 router.put('/:id',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
   validate(updateUserSchema),
   auditUserUpdate,
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
     const { id } = req.params;
     const updateData = req.body;
@@ -419,9 +419,9 @@ router.put('/:id',
 // Delete/deactivate user
 router.delete('/:id',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
   auditUserDelete,
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
     const { id } = req.params;
 
@@ -473,7 +473,7 @@ router.delete('/:id',
       } as ApiResponse);
     } else {
       // Soft delete - just deactivate the user
-      user.status = UserStatus.INACTIVE;
+      user.status = 'INACTIVE';
       user.updatedAt = new Date();
       await user.save();
 
@@ -489,9 +489,9 @@ router.delete('/:id',
 // Get expenses for a specific driver (Admin only)
 router.get('/:id/expenses',
   authenticate,
-  checkRole([UserRole.ADMIN]),
+  checkRole(['ADMIN']),
   validate(paginationSchema),
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { companyId } = req.user;
     const { id } = req.params;
     const page = parseInt(req.query.page) || 1;

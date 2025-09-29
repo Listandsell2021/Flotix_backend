@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt, { SignOptions } from 'jsonwebtoken';
-import type { JWTPayload } from '../types';
-import { UserRole, UserStatus } from '../types';
+import jwt from 'jsonwebtoken';
+import type { JWTPayload, UserRole } from '../types';
 import { config } from '../config';
 import { User } from '../models/User';
 
@@ -27,7 +26,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       
       // Verify user still exists and is active
       const user = await User.findById(decoded.userId);
-      if (!user || user.status !== UserStatus.ACTIVE) {
+      if (!user || user.status !== 'ACTIVE') {
         return res.status(401).json({ 
           success: false, 
           message: 'User not found or inactive' 
@@ -85,7 +84,7 @@ export const checkCompanyAccess = async (req: AuthRequest, res: Response, next: 
     }
 
     // Super admins can access all companies
-    if (req.user.role === UserRole.SUPER_ADMIN) {
+    if (req.user.role === 'SUPER_ADMIN') {
       return next();
     }
 
@@ -111,15 +110,15 @@ export const checkCompanyAccess = async (req: AuthRequest, res: Response, next: 
 
 export const generateTokens = (payload: JWTPayload) => {
   // Use longer expiry times for drivers using mobile app
-  const isDriver = payload.role === UserRole.DRIVER;
+  const isDriver = payload.role === 'DRIVER';
   
   const accessToken = jwt.sign(payload, config.JWT_ACCESS_SECRET, {
     expiresIn: isDriver ? config.JWT_DRIVER_ACCESS_EXPIRES_IN : config.JWT_ACCESS_EXPIRES_IN,
-  } as SignOptions);
-
+  });
+  
   const refreshToken = jwt.sign(payload, config.JWT_REFRESH_SECRET, {
     expiresIn: isDriver ? config.JWT_DRIVER_REFRESH_EXPIRES_IN : config.JWT_REFRESH_EXPIRES_IN,
-  } as SignOptions);
+  });
   
   return { accessToken, refreshToken };
 };

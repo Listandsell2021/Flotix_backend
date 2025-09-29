@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { 
   authenticate, 
   checkRole, 
@@ -61,8 +61,8 @@ const assignMultipleRolesSchema = z.object({
 // Get all roles (system roles + company-specific roles)
 router.get('/',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
-  asyncHandler(async (req: any, res: Response) => {
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId } = req.user;
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -124,9 +124,9 @@ router.get('/',
 // Create a new role (Admin creates company-specific, Super Admin creates system roles)
 router.post('/',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
   validate(createRoleSchema),
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId } = req.user;
     const roleData: CreateRoleRequest = req.body;
 
@@ -196,8 +196,8 @@ router.post('/',
 // Get all available permissions
 router.get('/permissions',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
-  asyncHandler(async (req: any, res: Response) => {
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  asyncHandler(async (req: any, res) => {
     const { role: userRole } = req.user;
 
     let permissions = Object.values(Permission);
@@ -240,8 +240,8 @@ router.get('/permissions',
 // Get a specific role
 router.get('/:id',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
-  asyncHandler(async (req: any, res: Response) => {
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId } = req.user;
     const { id } = req.params;
 
@@ -279,9 +279,9 @@ router.get('/:id',
 // Update a role (cannot update system roles unless super admin)
 router.put('/:id',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
   validate(updateRoleSchema),
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId } = req.user;
     const { id } = req.params;
     const updateData = req.body;
@@ -313,7 +313,7 @@ router.put('/:id',
           Permission.ROLE_MANAGEMENT
         ];
 
-        const hasRestrictedPermissions = updateData.permissions.some((p: Permission) =>
+        const hasRestrictedPermissions = updateData.permissions.some(p => 
           restrictedPermissions.includes(p)
         );
 
@@ -338,8 +338,8 @@ router.put('/:id',
 // Delete a role (system roles cannot be deleted)
 router.delete('/:id',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
-  asyncHandler(async (req: any, res: Response) => {
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId } = req.user;
     const { id } = req.params;
 
@@ -395,9 +395,9 @@ router.delete('/:id',
 // Assign a role to a user
 router.post('/assign',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
   validate(assignRoleSchema),
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId, userId: assignerId } = req.user;
     const { userId, roleId, expiresAt } = req.body;
 
@@ -457,9 +457,9 @@ router.post('/assign',
 // Assign multiple roles to a user (replaces existing assignments)
 router.post('/assign-multiple',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
   validate(assignMultipleRolesSchema),
-  asyncHandler(async (req: any, res: Response) => {
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId, userId: assignerId } = req.user;
     const { userId, roleIds, expiresAt } = req.body;
 
@@ -494,7 +494,7 @@ router.post('/assign-multiple',
     await RoleAssignment.deleteMany({ userId });
 
     // Create new assignments
-    const assignments = roleIds.map((roleId: string) => ({
+    const assignments = roleIds.map(roleId => ({
       userId,
       roleId,
       assignedBy: assignerId,
@@ -515,8 +515,8 @@ router.post('/assign-multiple',
 // Remove a role assignment
 router.delete('/assign/:userId/:roleId',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
-  asyncHandler(async (req: any, res: Response) => {
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId } = req.user;
     const { userId, roleId } = req.params;
 
@@ -549,8 +549,8 @@ router.delete('/assign/:userId/:roleId',
 // Get all roles assigned to a user
 router.get('/user/:userId',
   authenticate,
-  checkRole([UserRole.SUPER_ADMIN, UserRole.ADMIN]),
-  asyncHandler(async (req: any, res: Response) => {
+  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  asyncHandler(async (req: any, res) => {
     const { role: userRole, companyId } = req.user;
     const { userId } = req.params;
 

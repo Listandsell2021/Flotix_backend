@@ -1,9 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcrypt';
-import type { User as IUser } from '../types';
-import { UserRole, UserStatus } from '../types';
+import type { User as IUser, UserRole, UserStatus } from '../types';
 
-export interface UserDocument extends Omit<IUser, '_id'>, Document {
+export interface UserDocument extends IUser, Document {
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -30,22 +29,24 @@ const userSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: Object.values(UserRole),
+      enum: ['SUPER_ADMIN', 'ADMIN', 'DRIVER', 'MANAGER', 'VIEWER'],
       required: true,
     },
     companyId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'Company',
       required: function (this: UserDocument) {
-        return this.role !== UserRole.SUPER_ADMIN;
+        return this.role !== 'SUPER_ADMIN';
       },
     },
     assignedVehicleId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'Vehicle',
     },
     status: {
       type: String,
-      enum: Object.values(UserStatus),
-      default: UserStatus.ACTIVE,
+      enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
+      default: 'ACTIVE',
     },
     lastActive: {
       type: Date,
@@ -90,7 +91,7 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
 // Validation middleware
 userSchema.pre('validate', function (next) {
   // Super admins should not have companyId
-  if (this.role === UserRole.SUPER_ADMIN && this.companyId) {
+  if (this.role === 'SUPER_ADMIN' && this.companyId) {
     this.companyId = undefined;
   }
   next();

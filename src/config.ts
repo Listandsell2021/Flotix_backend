@@ -33,7 +33,8 @@ export const config = {
   
   // CORS
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS?.split(',') || [
-    'http://localhost:3000', // Next.js web app
+    'http://localhost:3000', // Next.js web app (alternative port)
+    'http://localhost:3001', // Next.js web app (current port)
     'http://localhost:8081', // React Native dev server
   ],
   

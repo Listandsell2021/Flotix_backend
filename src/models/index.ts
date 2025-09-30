@@ -5,3 +5,4 @@ export { Expense, type ExpenseDocument } from './Expense';
 export { AuditLog, type AuditLogDocument } from './AuditLog';
 export { Role, type RoleDocument } from './Role';
 export { RoleAssignment, type RoleAssignmentDocument } from './RoleAssignment';
+export { RegistrationEmail, type IRegistrationEmail } from './RegistrationEmail';

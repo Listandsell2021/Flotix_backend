@@ -5,3 +5,4 @@ export { vehicleRoutes } from './vehicles';
 export { expenseRoutes } from './expenses';
 export { reportRoutes } from './reports';
 export { auditRoutes } from './audit';
+export { roleRoutes } from './roles';

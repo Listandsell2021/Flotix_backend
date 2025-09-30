@@ -14,6 +14,7 @@ import { expenseRoutes } from './routes/expenses';
 import { reportRoutes } from './routes/reports';
 import { auditRoutes } from './routes/audit';
 import { roleRoutes } from './routes/roles';
+import registrationEmailRoutes from './routes/registrationEmails';
 
 const app = express();
 
@@ -61,6 +62,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api', registrationEmailRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

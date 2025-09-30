@@ -184,7 +184,8 @@ if (useModularRoutes && routesModule) {
       vehicleRoutes,
       expenseRoutes,
       reportRoutes,
-      auditRoutes
+      auditRoutes,
+      roleRoutes
     } = routesModule;
 
     // Set up individual routes
@@ -195,6 +196,7 @@ if (useModularRoutes && routesModule) {
     app.use('/api/expenses', expenseRoutes);
     app.use('/api/reports', reportRoutes);
     app.use('/api/audit', auditRoutes);
+    app.use('/api/roles', roleRoutes);
 
     console.log('🎯 Using full Flotix TypeScript routes');
     console.log('✅ All Flotix API endpoints available');
@@ -305,6 +307,25 @@ if (!useModularRoutes) {
     });
   });
 
+  app.get('/api/vehicles/my-vehicle', (req, res) => {
+    res.json({
+      success: true,
+      data: {
+        _id: 'demo-vehicle-id',
+        make: 'Demo',
+        model: 'Vehicle',
+        year: 2023,
+        licensePlate: 'DEMO-001',
+        type: 'CAR',
+        status: 'ACTIVE',
+        currentOdometer: 45000,
+        fuelType: 'GASOLINE',
+        color: 'Blue'
+      },
+      message: 'Demo vehicle data - compile TypeScript for full functionality'
+    });
+  });
+
   app.get('/api/companies', (req, res) => {
     res.json({
       success: true,
@@ -368,6 +389,7 @@ app.use('*', (req, res) => {
       'GET /api/expenses - Basic expenses (empty)',
       'GET /api/users - Basic users (empty)',
       'GET /api/vehicles - Basic vehicles (empty)',
+      'GET /api/vehicles/my-vehicle - Driver vehicle info (requires TypeScript)',
       '💡 Run "npm run build" then restart for full functionality'
     ]
   });

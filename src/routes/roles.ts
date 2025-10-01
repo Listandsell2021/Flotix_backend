@@ -84,10 +84,13 @@ router.get('/',
       }
       // Default: show all roles
     } else {
-      // Regular admin can only see system roles + their company roles
+      // Regular admin can only see system roles (except SYSTEM_SUPER_ADMIN) + their company roles
       query = {
         $or: [
-          { isSystem: true },
+          {
+            isSystem: true,
+            name: { $ne: 'SYSTEM_SUPER_ADMIN' } // Exclude SYSTEM_SUPER_ADMIN role for regular admins
+          },
           { companyId: companyId }
         ]
       };

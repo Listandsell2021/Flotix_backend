@@ -10,6 +10,7 @@ import {
   auditLog,
   getClientIP,
 } from "../middleware";
+import { z } from "zod";
 import { User, AuditLog, Vehicle } from "../models";
 import { AuditAction, AuditModule, AuditStatus } from "../types";
 import type {
@@ -21,6 +22,14 @@ import type {
 } from "../types";
 
 const router = Router();
+
+// Validation schema for password change
+const changePasswordSchema = z.object({
+  body: z.object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(6, "New password must be at least 6 characters"),
+  }),
+});
 
 // POST /api/auth/login
 router.post(
@@ -271,6 +280,52 @@ router.post(
     res.json({
       success: true,
       message: "Logged out successfully",
+    } as ApiResponse);
+  })
+);
+
+// POST /api/auth/change-password
+router.post(
+  "/change-password",
+  authenticate,
+  validate(changePasswordSchema),
+  auditLog({
+    action: AuditAction.UPDATE,
+    module: AuditModule.AUTH,
+    getReferenceIds: (req) => ({
+      userId: req.user?.userId,
+    }),
+    getDetails: (req) => `Password change attempt: ${req.user?.email}`,
+  }),
+  asyncHandler(async (req: any, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const { user } = req;
+
+    // Find user with password hash
+    const userDoc = await User.findById(user.userId).select("+passwordHash");
+    if (!userDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      } as ApiResponse);
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await userDoc.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password is incorrect",
+      } as ApiResponse);
+    }
+
+    // Update password (will be hashed by pre-save middleware)
+    userDoc.passwordHash = newPassword;
+    await userDoc.save();
+
+    res.json({
+      success: true,
+      message: "Password changed successfully",
     } as ApiResponse);
   })
 );

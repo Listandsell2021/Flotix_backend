@@ -187,23 +187,20 @@ router.get('/',
     let query: any = {};
 
     if (currentUserRole === 'SUPER_ADMIN') {
-      // Super Admin can see all users EXCEPT ADMIN and SUPER_ADMIN (no company filtering)
+      // Super Admin can see all users from all companies
       if (userRole) {
         query.role = userRole;
-      } else {
-        // Show all users EXCEPT ADMIN and SUPER_ADMIN from all companies
-        query.role = { $nin: ['ADMIN', 'SUPER_ADMIN'] };
       }
-      // DO NOT filter by companyId - show all users from all companies
+      // DO NOT filter by companyId - Super Admin sees all users from all companies
     } else if (currentUserRole === 'ADMIN') {
-      // Admin can see all users EXCEPT ADMIN and SUPER_ADMIN (no company filtering)
+      // Admin can ONLY see users from their own company
+      query.companyId = currentUserCompanyId;
       if (userRole) {
         query.role = userRole;
       } else {
-        // Show all users EXCEPT ADMIN and SUPER_ADMIN from all companies
-        query.role = { $nin: ['ADMIN', 'SUPER_ADMIN'] };
+        // Show only company-level users (DRIVER, MANAGER, VIEWER)
+        query.role = { $in: ['DRIVER', 'MANAGER', 'VIEWER'] };
       }
-      // DO NOT filter by companyId - show all users from all companies
     } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
       // Manager/Viewer can see company users but with limited scope
       query.companyId = currentUserCompanyId;

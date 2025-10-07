@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { 
-  authenticate, 
+import { startSession } from 'mongoose';
+import {
+  authenticate,
   checkRole,
   validate,
   createCompanySchema,
@@ -12,14 +13,97 @@ import {
   createError
 } from '../middleware';
 import { Company, User } from '../models';
-import type { 
-  UserRole, 
+import { EmailService } from '../modules';
+import type {
+  UserRole,
   ApiResponse,
   PaginatedResponse,
   Company as ICompany
 } from '../types';
 
 const router = Router();
+
+// POST /api/companies/create-with-admin
+// Atomically create company and admin user together
+router.post('/create-with-admin',
+  authenticate,
+  checkRole(['SUPER_ADMIN']),
+  asyncHandler(async (req: any, res) => {
+    const { company: companyData, admin: adminData } = req.body;
+
+    // Validate required fields
+    if (!companyData || !adminData) {
+      throw createError('Company and admin data are required', 400);
+    }
+
+    if (!adminData.email || !adminData.password || !adminData.name) {
+      throw createError('Admin name, email, and password are required', 400);
+    }
+
+    // Check if email already exists BEFORE starting transaction
+    const existingUser = await User.findOne({ email: adminData.email.toLowerCase() });
+    if (existingUser) {
+      throw createError(`Email "${adminData.email}" is already registered. Please use a different email.`, 400);
+    }
+
+    // Start MongoDB transaction session
+    const session = await startSession();
+    session.startTransaction();
+
+    try {
+      // Create company within transaction
+      const company = new Company(companyData);
+      await company.save({ session });
+
+      // Create admin user within transaction
+      const user = new User({
+        name: adminData.name,
+        email: adminData.email.toLowerCase(),
+        passwordHash: adminData.password, // Will be hashed by pre-save middleware
+        role: 'ADMIN',
+        companyId: company._id,
+        status: 'ACTIVE'
+      });
+      await user.save({ session });
+
+      // Commit the transaction - both created successfully
+      await session.commitTransaction();
+
+      // Send welcome email (after transaction commits, so we don't send if it fails)
+      try {
+        await EmailService.sendWelcomeEmail(
+          user.email,
+          user.name,
+          user.role,
+          adminData.password, // Original password before hashing
+          company.name
+        );
+        console.log(`✅ Welcome email sent to ${user.email}`);
+      } catch (emailError: any) {
+        // Log email error but don't fail - company and user already created
+        console.error('Failed to send welcome email:', emailError.message);
+      }
+
+      res.status(201).json({
+        success: true,
+        data: {
+          company: company.toObject(),
+          admin: user.toObject()
+        },
+        message: 'Company and admin created successfully'
+      } as ApiResponse);
+    } catch (error: any) {
+      // Rollback transaction if anything fails
+      await session.abortTransaction();
+
+      // Re-throw error to be handled by error middleware
+      throw error;
+    } finally {
+      // End session
+      session.endSession();
+    }
+  })
+);
 
 // POST /api/companies
 router.post('/',

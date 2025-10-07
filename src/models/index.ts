@@ -6,3 +6,5 @@ export { AuditLog, type AuditLogDocument } from './AuditLog';
 export { Role, type RoleDocument } from './Role';
 export { RoleAssignment, type RoleAssignmentDocument } from './RoleAssignment';
 export { RegistrationEmail, type IRegistrationEmail } from './RegistrationEmail';
+export { SmtpSettings, type SmtpSettingsDocument } from './SmtpSettings';
+export { SystemSettings, type SystemSettingsDocument } from './SystemSettings';

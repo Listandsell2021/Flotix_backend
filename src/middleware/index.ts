@@ -3,5 +3,6 @@ export { validate, loginSchema, refreshTokenSchema, createUserSchema, updateUser
 export { auditLog, auditUserCreate, auditUserUpdate, auditUserDelete, auditExpenseCreate, auditExpenseUpdate, auditExpenseDelete, auditReportExport, auditCompanyCreate, auditCompanyUpdate, auditVehicleCreate, auditVehicleUpdate, auditVehicleDelete, auditVehicleAssign, auditVehicleUnassign, getClientIP } from './audit';
 export { errorHandler, createError, asyncHandler, notFound } from './errorHandler';
 export { checkPermission, getUserPermissions, hasPermission, hasPermissions, getMissingPermissions, clearUserPermissionCache, clearAllPermissionCache } from './checkPermission';
+export { checkMaintenance } from './maintenance';
 export type { AuthRequest } from './auth';
 export type { AppError } from './errorHandler';

@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { config, validateConfig } from './config';
 import { connectDB } from './db/connection';
 import { errorHandler } from './middleware/errorHandler';
+import { checkMaintenance } from './middleware';
 import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
 import { companyRoutes } from './routes/companies';
@@ -15,6 +16,8 @@ import { reportRoutes } from './routes/reports';
 import { auditRoutes } from './routes/audit';
 import { roleRoutes } from './routes/roles';
 import registrationEmailRoutes from './routes/registrationEmails';
+import { smtpSettingsRoutes } from './routes/smtpSettings';
+import { systemSettingsRoutes } from './routes/systemSettings';
 
 const app = express();
 
@@ -48,21 +51,23 @@ app.use(morgan(config.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// Health check (bypass maintenance mode)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/companies', companyRoutes);
-app.use('/api/vehicles', vehicleRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/audit', auditRoutes);
-app.use('/api/roles', roleRoutes);
-app.use('/api', registrationEmailRoutes);
+app.use('/api/users', checkMaintenance, userRoutes);
+app.use('/api/companies', checkMaintenance, companyRoutes);
+app.use('/api/vehicles', checkMaintenance, vehicleRoutes);
+app.use('/api/expenses', checkMaintenance, expenseRoutes);
+app.use('/api/reports', checkMaintenance, reportRoutes);
+app.use('/api/audit', checkMaintenance, auditRoutes);
+app.use('/api/roles', checkMaintenance, roleRoutes);
+app.use('/api', checkMaintenance, registrationEmailRoutes);
+app.use('/api', checkMaintenance, smtpSettingsRoutes);
+app.use('/api', checkMaintenance, systemSettingsRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { 
-  authenticate, 
-  checkRole, 
+import {
+  authenticate,
+  checkRole,
   checkCompanyAccess,
   validate,
   createUserSchema,
@@ -14,8 +14,9 @@ import {
   createError
 } from '../middleware';
 import { User, Company, Vehicle, RoleAssignment } from '../models';
-import type { 
-  UserRole, 
+import { EmailService } from '../modules';
+import type {
+  UserRole,
   ApiResponse,
   PaginatedResponse,
   CreateUserRequest,
@@ -137,6 +138,28 @@ router.post('/',
       }
     }
 
+    // Send welcome email with login credentials
+    try {
+      let companyName = '';
+      if (userData.companyId) {
+        const company = await Company.findById(userData.companyId);
+        companyName = company?.name || '';
+      }
+
+      await EmailService.sendWelcomeEmail(
+        user.email,
+        user.name,
+        user.role,
+        userData.password, // Original password before hashing
+        companyName
+      );
+      console.log(`✅ Welcome email sent to ${user.email}`);
+    } catch (emailError: any) {
+      // Log email error but don't fail user creation
+      console.error('Failed to send welcome email:', emailError.message);
+      // Continue with user creation even if email fails
+    }
+
     res.status(201).json({
       success: true,
       data: user,
@@ -162,27 +185,25 @@ router.get('/',
 
     // Build query based on current user role
     let query: any = {};
-    
+
     if (currentUserRole === 'SUPER_ADMIN') {
-      // Super Admin can see users from any company if companyId is provided
-      if (req.query.companyId) {
-        query.companyId = req.query.companyId;
-        if (userRole) query.role = userRole;
-        // Allow super admin to query any role within a company
-      } else {
-        // Default behavior: show Admins from all companies
-        if (userRole) query.role = userRole;
-        else query.role = { $in: ['ADMIN'] }; 
-      }
-    } else if (currentUserRole === 'ADMIN') {
-      // Admin can see all company-level users from their company
-      query.companyId = currentUserCompanyId;
+      // Super Admin can see all users EXCEPT ADMIN and SUPER_ADMIN (no company filtering)
       if (userRole) {
         query.role = userRole;
       } else {
-        // Show all company-level users (excluding other admins)
-        query.role = { $in: ['DRIVER', 'MANAGER', 'VIEWER'] };
+        // Show all users EXCEPT ADMIN and SUPER_ADMIN from all companies
+        query.role = { $nin: ['ADMIN', 'SUPER_ADMIN'] };
       }
+      // DO NOT filter by companyId - show all users from all companies
+    } else if (currentUserRole === 'ADMIN') {
+      // Admin can see all users EXCEPT ADMIN and SUPER_ADMIN (no company filtering)
+      if (userRole) {
+        query.role = userRole;
+      } else {
+        // Show all users EXCEPT ADMIN and SUPER_ADMIN from all companies
+        query.role = { $nin: ['ADMIN', 'SUPER_ADMIN'] };
+      }
+      // DO NOT filter by companyId - show all users from all companies
     } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
       // Manager/Viewer can see company users but with limited scope
       query.companyId = currentUserCompanyId;
@@ -203,6 +224,11 @@ router.get('/',
       ];
     }
 
+    // DEBUG: Log query details
+    console.log('🔍 USER QUERY DEBUG:');
+    console.log('Current User Role:', currentUserRole);
+    console.log('Query:', JSON.stringify(query, null, 2));
+
     // Execute query with pagination
     const [users, total] = await Promise.all([
       User.find(query)
@@ -213,6 +239,10 @@ router.get('/',
         .limit(limit),
       User.countDocuments(query)
     ]);
+
+    // DEBUG: Log results
+    console.log('Found users:', users.length);
+    console.log('User roles:', users.map(u => `${u.email} (${u.role})`));
 
     // Populate assigned roles for each user
     const usersWithRoles = await Promise.all(

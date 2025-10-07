@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Flotix - Driver Account</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background-color: #f3f4f6;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    .email-body {
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+      padding: 60px 20px;
+      width: 100%;
+    }
+    .email-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    }
+    .header {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 60px 50px;
+      text-align: center;
+      position: relative;
+    }
+    .header-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0.1;
+      background-image:
+        repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.1) 10px, rgba(255,255,255,.1) 20px);
+    }
+    .header-content {
+      position: relative;
+      z-index: 1;
+    }
+    .logo {
+      font-size: 64px;
+      margin-bottom: 20px;
+      display: inline-block;
+      animation: bounce 1s ease-in-out;
+    }
+    .header h1 {
+      margin: 20px 0 10px 0;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .header-subtitle {
+      font-size: 18px;
+      opacity: 0.95;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+    .content-wrapper {
+      padding: 50px;
+      background: #ffffff;
+    }
+    .greeting {
+      font-size: 28px;
+      color: #111827;
+      margin-bottom: 25px;
+      font-weight: 700;
+    }
+    .intro-section {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border-left: 6px solid #10b981;
+      padding: 30px;
+      border-radius: 12px;
+      margin: 30px 0;
+    }
+    .intro-text {
+      color: #374151;
+      font-size: 17px;
+      line-height: 1.9;
+    }
+    .credentials-section {
+      margin: 40px 0;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #e5e7eb;
+    }
+    .section-icon {
+      font-size: 32px;
+    }
+    .section-title h2 {
+      color: #111827;
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .credentials-grid {
+      display: table;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 15px;
+    }
+    .credential-row {
+      display: table-row;
+    }
+    .credential-cell {
+      display: table-cell;
+      padding: 20px 25px;
+      background: #f0fdf4;
+      border: 2px solid #d1fae5;
+    }
+    .credential-cell:first-child {
+      border-radius: 10px 0 0 10px;
+      border-right: none;
+      width: 35%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    .credential-cell:last-child {
+      border-radius: 0 10px 10px 0;
+    }
+    .credential-label {
+      color: white;
+      font-weight: 700;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .credential-value {
+      font-family: 'Courier New', Courier, monospace;
+      color: #111827;
+      font-size: 18px;
+      font-weight: 600;
+      word-break: break-all;
+      position: relative;
+    }
+    .copy-button {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 10px;
+      float: right;
+    }
+    .copy-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+    .copy-button:active {
+      transform: translateY(0);
+    }
+    .app-download-section {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border: 3px solid #10b981;
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+      text-align: center;
+    }
+    .app-download-title {
+      color: #047857;
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 15px;
+    }
+    .app-download-desc {
+      color: #065f46;
+      font-size: 16px;
+      margin-bottom: 30px;
+      line-height: 1.8;
+    }
+    .app-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .app-store-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: #111827;
+      color: white;
+      padding: 15px 30px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    .app-store-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    }
+    .app-icon {
+      font-size: 32px;
+    }
+    .app-text {
+      text-align: left;
+    }
+    .app-text-small {
+      font-size: 11px;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .app-text-large {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .security-notice {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 25px 30px;
+      margin: 35px 0;
+      display: table;
+      width: 100%;
+    }
+    .notice-icon {
+      display: table-cell;
+      font-size: 36px;
+      width: 60px;
+      vertical-align: middle;
+    }
+    .notice-content {
+      display: table-cell;
+      vertical-align: middle;
+      padding-left: 20px;
+    }
+    .notice-title {
+      color: #78350f;
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+    .notice-text {
+      color: #92400e;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .features-section {
+      margin: 40px 0;
+    }
+    .features-grid {
+      display: table;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 20px;
+    }
+    .feature-row {
+      display: table-row;
+    }
+    .feature-item {
+      display: table-cell;
+      width: 50%;
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      padding: 25px;
+      border-radius: 12px;
+      border: 2px solid #d1fae5;
+    }
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 15px;
+      display: block;
+    }
+    .feature-title {
+      color: #111827;
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .feature-desc {
+      color: #6b7280;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .divider {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #d1fae5 20%, #d1fae5 80%, transparent);
+      margin: 50px 0;
+    }
+    .footer {
+      background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+      color: white;
+      padding: 50px;
+      text-align: center;
+    }
+    .footer-brand {
+      font-weight: 800;
+      font-size: 24px;
+      margin-bottom: 15px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .footer-tagline {
+      color: #9ca3af;
+      font-size: 15px;
+      margin-bottom: 25px;
+    }
+    .footer-links {
+      margin: 25px 0;
+      padding: 25px 0;
+      border-top: 1px solid #374151;
+      border-bottom: 1px solid #374151;
+    }
+    .footer-link {
+      color: #9ca3af;
+      text-decoration: none;
+      margin: 0 20px;
+      font-size: 14px;
+      transition: color 0.3s ease;
+    }
+    .footer-link:hover {
+      color: #10b981;
+    }
+    .footer-copyright {
+      color: #6b7280;
+      font-size: 13px;
+      margin-top: 20px;
+      line-height: 1.8;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { border-radius: 0; }
+      .content-wrapper { padding: 30px 20px; }
+      .header { padding: 40px 20px; }
+      .app-download-section { padding: 30px 20px; }
+      .app-buttons { flex-direction: column; }
+      .app-store-button { width: 100%; justify-content: center; }
+      .features-grid { display: block; }
+      .feature-item { display: block; width: 100%; margin-bottom: 15px; }
+      .credentials-grid { display: block; }
+      .credential-row { display: block; margin-bottom: 15px; }
+      .credential-cell { display: block; width: 100% !important; border-radius: 0 !important; border: 2px solid #d1fae5 !important; }
+      .credential-cell:first-child { border-radius: 10px 10px 0 0 !important; border-bottom: none !important; }
+      .credential-cell:last-child { border-radius: 0 0 10px 10px !important; }
+    }
+  </style>
+  <script>
+    function copyToClipboard(elementId, button) {
+      const element = document.getElementById(elementId);
+      const text = element.textContent;
+
+      // Create temporary textarea
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+
+      // Select and copy
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      // Update button text
+      const originalText = button.innerHTML;
+      button.innerHTML = '✓ Copied!';
+      button.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+
+      // Reset after 2 seconds
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+      }, 2000);
+    }
+  </script>
+</head>
+<body>
+  <div class="email-body">
+    <div class="email-wrapper">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-pattern"></div>
+        <div class="header-content">
+          <div class="logo">🚗</div>
+          <h1>Welcome to Flotix</h1>
+          <p class="header-subtitle">Driver Account Created</p>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="content-wrapper">
+        <div class="greeting">Hello {{userName}}! 👋</div>
+
+        <div class="intro-section">
+          <p class="intro-text">
+            Your driver account has been successfully created for <strong>{{companyName}}</strong>.
+            Download the Flotix mobile app to start submitting expenses, tracking your activities, and managing your fleet tasks on the go.
+          </p>
+        </div>
+
+        <!-- Credentials Section -->
+        <div class="credentials-section">
+          <div class="section-title">
+            <span class="section-icon">🔐</span>
+            <h2>Your Login Credentials</h2>
+          </div>
+
+          <div class="credentials-grid">
+            <div class="credential-row">
+              <div class="credential-cell">
+                <div class="credential-label">Email Address</div>
+              </div>
+              <div class="credential-cell">
+                <div class="credential-value">
+                  <span id="email-value">{{userEmail}}</span>
+                  <button class="copy-button" onclick="copyToClipboard('email-value', this)">📋 Copy</button>
+                </div>
+              </div>
+            </div>
+            <div class="credential-row">
+              <div class="credential-cell">
+                <div class="credential-label">Temporary Password</div>
+              </div>
+              <div class="credential-cell">
+                <div class="credential-value">
+                  <span id="password-value">{{password}}</span>
+                  <button class="copy-button" onclick="copyToClipboard('password-value', this)">📋 Copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- App Download Section -->
+        <div class="app-download-section">
+          <div class="app-download-title">📲 Download the Flotix Mobile App</div>
+          <p class="app-download-desc">
+            Get the Flotix mobile app on your device to submit expenses with OCR receipt scanning, track your driving activities, and stay connected with your fleet.
+          </p>
+
+          <div class="app-buttons">
+            <!-- App Store Button -->
+            <a href="{{appDownloadUrl}}" class="app-store-button">
+              <div class="app-icon">🍎</div>
+              <div class="app-text">
+                <div class="app-text-small">Download on the</div>
+                <div class="app-text-large">App Store</div>
+              </div>
+            </a>
+
+            <!-- Google Play Button -->
+            <a href="{{appDownloadUrl}}" class="app-store-button">
+              <div class="app-icon">▶️</div>
+              <div class="app-text">
+                <div class="app-text-small">GET IT ON</div>
+                <div class="app-text-large">Google Play</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Security Notice -->
+        <div class="security-notice">
+          <div class="notice-icon">⚠️</div>
+          <div class="notice-content">
+            <div class="notice-title">Important Security Notice</div>
+            <div class="notice-text">
+              For your account security, please change your password in the app settings immediately after your first login.
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Features Section -->
+        <div class="features-section">
+          <div class="section-title">
+            <span class="section-icon">✨</span>
+            <h2>What You Can Do with the App</h2>
+          </div>
+
+          <div class="features-grid">
+            <div class="feature-row">
+              <div class="feature-item">
+                <span class="feature-icon">📸</span>
+                <div class="feature-title">Scan Receipts with OCR</div>
+                <div class="feature-desc">Snap a photo of your receipt and let AI extract all the details automatically.</div>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon">💰</span>
+                <div class="feature-title">Submit Expenses</div>
+                <div class="feature-desc">Quick and easy expense submission with automatic categorization.</div>
+              </div>
+            </div>
+            <div class="feature-row">
+              <div class="feature-item">
+                <span class="feature-icon">📊</span>
+                <div class="feature-title">Track History</div>
+                <div class="feature-desc">View all your past expenses and track your spending over time.</div>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon">🚗</span>
+                <div class="feature-title">Manage Vehicle Info</div>
+                <div class="feature-desc">Access your assigned vehicle details and maintenance schedules.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p style="text-align: center; color: #6b7280; font-size: 15px; margin-top: 40px;">
+          Need help? Contact your company administrator or visit our <a href="#" style="color: #10b981; text-decoration: none;">support center</a>.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="footer-brand">FLOTIX</div>
+        <p class="footer-tagline">Professional Fleet Expense Management Solution</p>
+        <div class="footer-links">
+          <a href="#" class="footer-link">Help Center</a>
+          <a href="#" class="footer-link">Documentation</a>
+          <a href="#" class="footer-link">Privacy Policy</a>
+          <a href="#" class="footer-link">Terms of Service</a>
+        </div>
+        <p class="footer-copyright">
+          © 2024 Flotix. All rights reserved.<br>
+          This is an automated email. Please do not reply to this message.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

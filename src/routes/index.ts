@@ -6,3 +6,6 @@ export { expenseRoutes } from './expenses';
 export { reportRoutes } from './reports';
 export { auditRoutes } from './audit';
 export { roleRoutes } from './roles';
+export { default as registrationEmailRoutes } from './registrationEmails';
+export { smtpSettingsRoutes } from './smtpSettings';
+export { systemSettingsRoutes } from './systemSettings';

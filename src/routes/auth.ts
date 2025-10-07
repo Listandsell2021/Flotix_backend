@@ -11,8 +11,8 @@ import {
   getClientIP,
 } from "../middleware";
 import { z } from "zod";
-import { User, AuditLog, Vehicle } from "../models";
-import { AuditAction, AuditModule, AuditStatus } from "../types";
+import { User, AuditLog, Vehicle, SystemSettings } from "../models";
+import { AuditAction, AuditModule, AuditStatus, UserRole } from "../types";
 import type {
   LoginRequest,
   LoginResponse,
@@ -101,6 +101,23 @@ router.post(
         success: false,
         message: "Invalid credentials",
       } as ApiResponse);
+    }
+
+    // Check maintenance mode BEFORE generating tokens
+    const systemSettings = await SystemSettings.findOne();
+    if (systemSettings && systemSettings.maintenanceMode) {
+      // Block all users except Super Admins
+      if (user.role !== UserRole.SUPER_ADMIN) {
+        console.log('🚧 Maintenance mode active - blocking login for:', user.email);
+        return res.status(503).json({
+          success: false,
+          error: 'System Maintenance',
+          message: systemSettings.maintenanceMessage ||
+            'The system is currently undergoing maintenance. Please check back soon.',
+          maintenanceMode: true,
+        } as ApiResponse);
+      }
+      console.log('🔓 Maintenance mode active - allowing Super Admin:', user.email);
     }
 
     // Generate tokens
@@ -327,6 +344,82 @@ router.post(
       success: true,
       message: "Password changed successfully",
     } as ApiResponse);
+  })
+);
+
+// POST /api/auth/impersonate-admin/:companyId
+// Super Admin only: Get admin token for a specific company
+router.post(
+  "/impersonate-admin/:companyId",
+  authenticate,
+  auditLog({
+    action: AuditAction.LOGIN,
+    module: AuditModule.AUTH,
+    getReferenceIds: (req) => ({
+      companyId: req.params.companyId,
+      superAdminId: req.user?.userId,
+    }),
+    getDetails: (req) => `Super Admin impersonation: ${req.user?.email} accessing company ${req.params.companyId}`,
+  }),
+  asyncHandler(async (req: any, res) => {
+    const { user } = req;
+    const { companyId } = req.params;
+
+    // Verify the requesting user is a super admin
+    if (user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: "Only super admins can impersonate company admins",
+      } as ApiResponse);
+    }
+
+    // Find an active admin user for this company
+    const adminUser = await User.findOne({
+      companyId: companyId,
+      role: 'ADMIN',
+      status: 'ACTIVE',
+    }).populate('companyId', 'name plan status');
+
+    if (!adminUser) {
+      return res.status(404).json({
+        success: false,
+        message: "No active admin user found for this company",
+      } as ApiResponse);
+    }
+
+    // Generate tokens for the admin user
+    // Extract the companyId - it might be populated as an object
+    const companyIdValue = typeof adminUser.companyId === 'object' && adminUser.companyId !== null
+      ? (adminUser.companyId as any)._id?.toString() || adminUser.companyId.toString()
+      : adminUser.companyId?.toString();
+
+    const tokenPayload: JWTPayload = {
+      userId: adminUser._id.toString(),
+      email: adminUser.email,
+      role: adminUser.role,
+      companyId: companyIdValue,
+    };
+
+    const tokens = generateTokens(tokenPayload);
+
+    // Update admin user's last active
+    adminUser.lastActive = new Date();
+    await adminUser.save();
+
+    // Return admin user data and tokens
+    const userData = adminUser.toObject();
+    delete userData.passwordHash;
+
+    const response: LoginResponse = {
+      user: userData,
+      tokens,
+    };
+
+    res.json({
+      success: true,
+      data: response,
+      message: "Impersonation successful",
+    } as ApiResponse<LoginResponse>);
   })
 );
 

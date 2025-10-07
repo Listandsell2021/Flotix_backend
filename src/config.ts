@@ -10,7 +10,8 @@ export const config = {
   
   // Database
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/fleetflow',
-  
+  DB_NAME: process.env.DB_NAME || 'flotix_test', // Separate database name (flotix_test or flotix_live)
+
   // JWT
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'your-access-secret-key',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',

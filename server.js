@@ -185,7 +185,10 @@ if (useModularRoutes && routesModule) {
       expenseRoutes,
       reportRoutes,
       auditRoutes,
-      roleRoutes
+      roleRoutes,
+      registrationEmailRoutes,
+      smtpSettingsRoutes,
+      systemSettingsRoutes
     } = routesModule;
 
     // Set up individual routes
@@ -197,6 +200,24 @@ if (useModularRoutes && routesModule) {
     app.use('/api/reports', reportRoutes);
     app.use('/api/audit', auditRoutes);
     app.use('/api/roles', roleRoutes);
+
+    // Add registration emails route
+    if (registrationEmailRoutes) {
+      app.use('/api', registrationEmailRoutes);
+      console.log('✅ Registration emails route loaded');
+    }
+
+    // Add SMTP settings route
+    if (smtpSettingsRoutes) {
+      app.use('/api', smtpSettingsRoutes);
+      console.log('✅ SMTP settings route loaded');
+    }
+
+    // Add system settings route
+    if (systemSettingsRoutes) {
+      app.use('/api', systemSettingsRoutes);
+      console.log('✅ System settings route loaded');
+    }
 
     console.log('🎯 Using full Flotix TypeScript routes');
     console.log('✅ All Flotix API endpoints available');
@@ -414,15 +435,34 @@ const startServer = async () => {
       throw new Error('MONGODB_URI environment variable is required');
     }
 
+    // Add database name from .env
+    const dbName = process.env.DB_NAME || 'flotix_test';
+    // Check if URI already has a database name or ends with /
+    let fullMongoUri;
+    if (mongoUri.includes('/?')) {
+      // URI like: mongodb+srv://user:pass@host.net/?params
+      fullMongoUri = mongoUri.replace('/?', `/${dbName}?`);
+    } else if (mongoUri.includes('?')) {
+      // URI like: mongodb+srv://user:pass@host.net?params
+      fullMongoUri = mongoUri.replace('?', `/${dbName}?`);
+    } else if (mongoUri.endsWith('/')) {
+      // URI ends with /
+      fullMongoUri = `${mongoUri}${dbName}`;
+    } else {
+      // URI like: mongodb+srv://user:pass@host.net
+      fullMongoUri = `${mongoUri}/${dbName}`;
+    }
+
     console.log('🔗 Connecting to MongoDB for Flotix...');
 
-    await mongoose.connect(mongoUri, {
+    const connection = await mongoose.connect(fullMongoUri, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
 
     console.log('✅ Connected to MongoDB');
+    console.log(`📊 Database: ${connection.connection.name}`);
 
     // Start the server
     const server = app.listen(PORT, () => {

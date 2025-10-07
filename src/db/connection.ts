@@ -3,11 +3,17 @@ import { config } from '../config';
 
 export const connectDB = async (): Promise<void> => {
   try {
-    const connection = await mongoose.connect(config.MONGODB_URI, {
+    // Build MongoDB URI with database name
+    const mongoURI = config.MONGODB_URI.includes('?')
+      ? config.MONGODB_URI.replace('?', `/${config.DB_NAME}?`)
+      : `${config.MONGODB_URI}/${config.DB_NAME}`;
+
+    const connection = await mongoose.connect(mongoURI, {
       serverSelectionTimeoutMS: 5000,
     });
 
     console.log(`MongoDB connected: ${connection.connection.host}`);
+    console.log(`📊 Database: ${connection.connection.name}`);
 
     mongoose.connection.on('error', (error) => {
       console.error('MongoDB connection error:', error);

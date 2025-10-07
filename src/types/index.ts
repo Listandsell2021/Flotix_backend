@@ -371,6 +371,11 @@ export interface DashboardKPIs {
     previousMonth: number;
     percentageChange: number;
   };
+  // Enhanced metrics
+  totalActiveDrivers?: number;
+  expenseCountThisMonth?: number;
+  driversWithExpensesThisMonth?: number;
+  averageExpensePerDriver?: number;
 }
 
 export interface ReportData {

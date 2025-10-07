@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Flotix</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 20px;
+    }
+    .email-wrapper { max-width: 600px; margin: 0 auto; }
+    .email-container {
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 50px 40px;
+      text-align: center;
+      position: relative;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+    }
+    .logo {
+      font-size: 48px;
+      margin-bottom: 10px;
+      animation: fadeInDown 0.6s ease-out;
+    }
+    .header h1 {
+      margin: 15px 0 5px 0;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      font-size: 16px;
+      opacity: 0.95;
+      font-weight: 300;
+    }
+    .content { padding: 40px; }
+    .greeting {
+      font-size: 20px;
+      color: #111827;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    .intro-text {
+      color: #4b5563;
+      margin-bottom: 30px;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+    .credentials-box {
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 30px;
+      margin: 30px 0;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .credentials-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      color: #667eea;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .credential-row {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 12px 0;
+      border-left: 4px solid #667eea;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .credential-row:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    }
+    .credential-label {
+      font-weight: 600;
+      color: #6b7280;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .credential-value {
+      font-family: 'Courier New', Courier, monospace;
+      background: #f9fafb;
+      color: #111827;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      border: 1px solid #e5e7eb;
+      display: block;
+      word-break: break-all;
+    }
+    .alert-box {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 25px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .alert-icon {
+      font-size: 24px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .alert-text {
+      color: #92400e;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .alert-text strong { color: #78350f; }
+    .cta-container {
+      text-align: center;
+      margin: 35px 0;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white !important;
+      padding: 16px 48px;
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 16px;
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s ease;
+      letter-spacing: 0.5px;
+    }
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px rgba(102, 126, 234, 0.5);
+    }
+    .features {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 25px;
+      margin: 30px 0;
+    }
+    .features h3 {
+      color: #111827;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    .feature-list {
+      list-style: none;
+      padding: 0;
+    }
+    .feature-list li {
+      padding: 10px 0;
+      color: #4b5563;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .feature-list li::before {
+      content: '✓';
+      color: #10b981;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+      margin: 30px 0;
+    }
+    .footer {
+      background: #f9fafb;
+      padding: 30px 40px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer-brand {
+      font-weight: 700;
+      color: #111827;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .footer-text {
+      color: #6b7280;
+      font-size: 13px;
+      margin: 5px 0;
+    }
+    .footer-links {
+      margin: 15px 0;
+    }
+    .footer-link {
+      color: #667eea;
+      text-decoration: none;
+      margin: 0 10px;
+      font-size: 13px;
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <!-- Header -->
+      <div class="header">
+        <div class="logo">🚀</div>
+        <h1>Welcome to Flotix</h1>
+        <p>Fleet Management System</p>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+        <div class="greeting">Hello {{userName}}! 👋</div>
+
+        <p class="intro-text">
+          Your administrator account has been successfully created for <strong>{{companyName}}</strong>.
+          You now have full access to manage your fleet operations, track expenses, and oversee your team.
+        </p>
+
+        <!-- Credentials Box -->
+        <div class="credentials-box">
+          <div class="credentials-header">
+            <span>🔐</span>
+            <span>Your Login Credentials</span>
+          </div>
+
+          <div class="credential-row">
+            <div class="credential-label">Email Address</div>
+            <div class="credential-value">{{userEmail}}</div>
+          </div>
+
+          <div class="credential-row">
+            <div class="credential-label">Temporary Password</div>
+            <div class="credential-value">{{password}}</div>
+          </div>
+        </div>
+
+        <!-- Alert Box -->
+        <div class="alert-box">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-text">
+            <strong>Security Notice:</strong> For your account security, please change your password immediately after your first login.
+          </div>
+        </div>
+
+        <!-- CTA Button -->
+        <div class="cta-container">
+          <a href="{{loginUrl}}" class="cta-button">Access Your Dashboard →</a>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Features -->
+        <div class="features">
+          <h3>What You Can Do as Admin:</h3>
+          <ul class="feature-list">
+            <li>Manage drivers and assign vehicles</li>
+            <li>Review and approve expense reports</li>
+            <li>Generate comprehensive analytics</li>
+            <li>Configure company settings</li>
+            <li>Track fleet performance in real-time</li>
+          </ul>
+        </div>
+
+        <p class="footer-text" style="margin-top: 30px; text-align: center;">
+          Need help? Contact your system administrator or visit our support center.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="footer-brand">Flotix Fleet Management</div>
+        <p class="footer-text">Professional Fleet Expense Management Solution</p>
+        <div class="footer-links">
+          <a href="#" class="footer-link">Help Center</a>
+          <a href="#" class="footer-link">Privacy Policy</a>
+          <a href="#" class="footer-link">Terms of Service</a>
+        </div>
+        <p class="footer-text" style="margin-top: 15px;">
+          © 2024 Flotix. All rights reserved.<br>
+          This is an automated email. Please do not reply to this message.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

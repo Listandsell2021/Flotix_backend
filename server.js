@@ -142,35 +142,27 @@ app.get('/debug/firebase', (req, res) => {
   });
 });
 
-// Try to import the compiled TypeScript routes
+// Try to import the TypeScript routes using tsx
 let useModularRoutes = false;
 let routesModule = null;
 
 console.log('🔍 Attempting to load Flotix routes...');
 
 try {
-  // Try tsx runtime compilation for development FIRST (since that has the working code)
-  try {
-    require('tsx/cjs');
-    routesModule = require('./src/routes');
-    console.log('✅ Successfully imported routes using tsx runtime (source TypeScript)');
-    useModularRoutes = true;
-  } catch (tsxError) {
-    console.log('📦 tsx not available, trying compiled TypeScript...');
+  // Register tsx to handle TypeScript files
+  const path = require('path');
+  const tsxPath = path.join(__dirname, 'node_modules', 'tsx', 'dist', 'cjs', 'index.cjs');
+  require(tsxPath);
+  console.log('✅ tsx module loaded successfully');
 
-    // Fallback to compiled TypeScript in dist
-    try {
-      routesModule = require('./dist/routes');
-      console.log('✅ Successfully imported routes from compiled TypeScript (dist/)');
-      useModularRoutes = true;
-    } catch (distError) {
-      console.log('⚠️ Neither tsx nor compiled routes available, falling back to basic routes');
-      console.log('💡 Either install tsx or run "npm run build" to compile TypeScript routes');
-    }
-  }
+  // Now import the TypeScript routes
+  routesModule = require('./src/routes');
+  console.log('✅ Successfully imported routes using tsx runtime (source TypeScript)');
+  useModularRoutes = true;
 } catch (error) {
-  console.log('⚠️ Could not import modular routes:', error.message);
+  console.log('⚠️ Could not load TypeScript routes with tsx:', error.message);
   console.log('📦 Falling back to basic route definitions');
+  console.log('💡 Make sure tsx is installed: npm install tsx');
 }
 
 // Use modular TypeScript routes if available

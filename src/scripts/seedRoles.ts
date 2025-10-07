@@ -8,16 +8,16 @@ validateConfig();
 const DEFAULT_ROLES = [
   {
     name: 'SYSTEM_SUPER_ADMIN',
-    displayName: 'System Super Admin',
-    description: 'Full system access with all permissions',
+    displayName: 'Super Administrator',
+    description: 'Full system access - manages all companies, admins, and system settings',
     permissions: Object.values(Permission),
     isSystem: true,
     userRole: UserRole.SUPER_ADMIN
   },
   {
     name: 'SYSTEM_ADMIN',
-    displayName: 'System Admin',
-    description: 'Company administrator with full company management permissions',
+    displayName: 'Company Administrator',
+    description: 'Manages company operations - drivers, vehicles, and expenses within their company',
     permissions: [
       Permission.COMPANY_READ,
       Permission.COMPANY_UPDATE,
@@ -52,11 +52,12 @@ const DEFAULT_ROLES = [
   },
   {
     name: 'SYSTEM_MANAGER',
-    displayName: 'System Manager',
-    description: 'Fleet manager with driver and vehicle management permissions',
+    displayName: 'Fleet Manager',
+    description: 'Manages vehicles and monitors driver expenses',
     permissions: [
       Permission.DRIVER_READ,
       Permission.DRIVER_UPDATE,
+      Permission.VEHICLE_CREATE,
       Permission.VEHICLE_READ,
       Permission.VEHICLE_UPDATE,
       Permission.VEHICLE_ASSIGN,
@@ -72,8 +73,8 @@ const DEFAULT_ROLES = [
   },
   {
     name: 'SYSTEM_VIEWER',
-    displayName: 'System Viewer',
-    description: 'Read-only access to fleet data and reports',
+    displayName: 'Report Viewer',
+    description: 'View-only access to reports and dashboards',
     permissions: [
       Permission.DRIVER_READ,
       Permission.VEHICLE_READ,
@@ -86,8 +87,8 @@ const DEFAULT_ROLES = [
   },
   {
     name: 'SYSTEM_DRIVER',
-    displayName: 'System Driver',
-    description: 'Driver with expense management permissions',
+    displayName: 'Driver',
+    description: 'Mobile app access - can create and manage own expenses',
     permissions: [
       Permission.EXPENSE_CREATE,
       Permission.EXPENSE_READ,

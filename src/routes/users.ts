@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   authenticate,
   checkRole,
@@ -11,25 +11,26 @@ import {
   auditUserUpdate,
   auditUserDelete,
   asyncHandler,
-  createError
-} from '../middleware';
-import { User, Company, Vehicle, RoleAssignment } from '../models';
-import { EmailService } from '../modules';
+  createError,
+} from "../middleware";
+import { User, Company, Vehicle, RoleAssignment } from "../models";
+import { EmailService } from "../modules";
 import type {
   UserRole,
   ApiResponse,
   PaginatedResponse,
   CreateUserRequest,
-  User as IUser
-} from '../types';
+  User as IUser,
+} from "../types";
 
 const router = Router();
 
 // POST /api/users
 // Create user (Super Admin creates Admins, Admin creates Drivers)
-router.post('/',
+router.post(
+  "/",
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  checkRole(["SUPER_ADMIN", "ADMIN"]),
   validate(createUserSchema),
   auditUserCreate,
   asyncHandler(async (req: any, res) => {
@@ -37,76 +38,87 @@ router.post('/',
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
 
     // Validate role creation permissions
-    if (currentUserRole === 'SUPER_ADMIN') {
-      if (userData.role === 'ADMIN') {
+    if (currentUserRole === "SUPER_ADMIN") {
+      if (userData.role === "ADMIN") {
         // Super Admin creating Admin - companyId required
         if (!userData.companyId) {
-          throw createError('Company ID is required when creating Admin users', 400);
+          throw createError(
+            "Company ID is required when creating Admin users",
+            400
+          );
         }
-        
+
         // Verify company exists
         const company = await Company.findById(userData.companyId);
         if (!company) {
-          throw createError('Company not found', 404);
+          throw createError("Company not found", 404);
         }
-      } else if (userData.role === 'SUPER_ADMIN') {
-        throw createError('Cannot create another Super Admin user', 403);
+      } else if (userData.role === "SUPER_ADMIN") {
+        throw createError("Cannot create another Super Admin user", 403);
       }
       // Super Admin can create any other role
-    } else if (currentUserRole === 'ADMIN') {
+    } else if (currentUserRole === "ADMIN") {
       // Admin can create company-level users (DRIVER, MANAGER, VIEWER)
-      if (['DRIVER', 'MANAGER', 'VIEWER'].includes(userData.role)) {
+      if (["DRIVER", "MANAGER", "VIEWER"].includes(userData.role)) {
         // Use admin's company for all company-level users
         userData.companyId = currentUserCompanyId;
-        
+
         // Check driver limit only for drivers
-        if (userData.role === 'DRIVER') {
+        if (userData.role === "DRIVER") {
           const company = await Company.findById(currentUserCompanyId);
           if (!company) {
-            throw createError('Company not found', 404);
+            throw createError("Company not found", 404);
           }
-          
+
           const driverCount = await User.countDocuments({
             companyId: currentUserCompanyId,
-            role: 'DRIVER',
-            status: 'ACTIVE'
+            role: "DRIVER",
+            status: "ACTIVE",
           });
-          
+
           if (driverCount >= company.driverLimit) {
-            throw createError('Driver limit reached for your company', 400);
+            throw createError("Driver limit reached for your company", 400);
           }
         }
       } else {
-        throw createError('You are not authorized to create this type of user', 403);
+        throw createError(
+          "You are not authorized to create this type of user",
+          403
+        );
       }
     } else {
-      throw createError('You are not authorized to create users', 403);
+      throw createError("You are not authorized to create users", 403);
     }
 
     // Check if email already exists
-    const existingUser = await User.findOne({ email: userData.email.toLowerCase() });
+    const existingUser = await User.findOne({
+      email: userData.email.toLowerCase(),
+    });
     if (existingUser) {
-      throw createError('Email already exists', 400);
+      throw createError("Email already exists", 400);
     }
 
     // Validate vehicle assignment if provided
     if (userData.assignedVehicleId) {
       const vehicle = await Vehicle.findOne({
         _id: userData.assignedVehicleId,
-        companyId: userData.companyId
+        companyId: userData.companyId,
       });
-      
+
       if (!vehicle) {
-        throw createError('Vehicle not found in your company', 404);
+        throw createError("Vehicle not found in your company", 404);
       }
-      
-      if (vehicle.status === 'RETIRED') {
-        throw createError('Cannot assign retired vehicle to driver', 400);
+
+      if (vehicle.status === "RETIRED") {
+        throw createError("Cannot assign retired vehicle to driver", 400);
       }
-      
+
       // Check if vehicle has reached maximum driver limit (5 drivers)
       if (vehicle.assignedDriverIds && vehicle.assignedDriverIds.length >= 5) {
-        throw createError('Vehicle already has maximum number of drivers assigned (5)', 400);
+        throw createError(
+          "Vehicle already has maximum number of drivers assigned (5)",
+          400
+        );
       }
     }
 
@@ -140,10 +152,10 @@ router.post('/',
 
     // Send welcome email with login credentials
     try {
-      let companyName = '';
+      let companyName = "";
       if (userData.companyId) {
         const company = await Company.findById(userData.companyId);
-        companyName = company?.name || '';
+        companyName = company?.name || "";
       }
 
       await EmailService.sendWelcomeEmail(
@@ -156,23 +168,24 @@ router.post('/',
       console.log(`✅ Welcome email sent to ${user.email}`);
     } catch (emailError: any) {
       // Log email error but don't fail user creation
-      console.error('Failed to send welcome email:', emailError.message);
+      console.error("Failed to send welcome email:", emailError.message);
       // Continue with user creation even if email fails
     }
 
     res.status(201).json({
       success: true,
       data: user,
-      message: 'User created successfully'
+      message: "User created successfully",
     } as ApiResponse<IUser>);
   })
 );
 
 // GET /api/users
 // Get users (filtered by role and company access)
-router.get('/',
+router.get(
+  "/",
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'VIEWER']),
+  checkRole(["SUPER_ADMIN", "ADMIN", "MANAGER", "VIEWER"]),
   validate(paginationSchema),
   asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
@@ -182,33 +195,35 @@ router.get('/',
     const search = req.query.search;
     const status = req.query.status;
     const userRole = req.query.role;
+    const sortBy = req.query.sortBy || "createdAt";
+    const sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
 
     // Build query based on current user role
     let query: any = {};
 
-    if (currentUserRole === 'SUPER_ADMIN') {
+    if (currentUserRole === "SUPER_ADMIN") {
       // Super Admin can see all users from all companies
       if (userRole) {
         query.role = userRole;
       }
       // DO NOT filter by companyId - Super Admin sees all users from all companies
-    } else if (currentUserRole === 'ADMIN') {
+    } else if (currentUserRole === "ADMIN") {
       // Admin can ONLY see users from their own company
       query.companyId = currentUserCompanyId;
       if (userRole) {
         query.role = userRole;
       } else {
         // Show only company-level users (DRIVER, MANAGER, VIEWER)
-        query.role = { $in: ['DRIVER', 'MANAGER', 'VIEWER'] };
+        query.role = { $in: ["DRIVER", "MANAGER", "VIEWER"] };
       }
-    } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
+    } else if (currentUserRole === "MANAGER" || currentUserRole === "VIEWER") {
       // Manager/Viewer can see company users but with limited scope
       query.companyId = currentUserCompanyId;
       if (userRole) {
         query.role = userRole;
       } else {
         // Show only drivers and viewers for managers/viewers
-        query.role = { $in: ['DRIVER', 'VIEWER'] };
+        query.role = { $in: ["DRIVER", "VIEWER"] };
       }
     }
 
@@ -216,40 +231,48 @@ router.get('/',
     if (status) query.status = status;
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
       ];
     }
 
     // DEBUG: Log query details
-    console.log('🔍 USER QUERY DEBUG:');
-    console.log('Current User Role:', currentUserRole);
-    console.log('Query:', JSON.stringify(query, null, 2));
+    console.log("🔍 USER QUERY DEBUG:");
+    console.log("Current User Role:", currentUserRole);
+    console.log("Query:", JSON.stringify(query, null, 2));
 
     // Execute query with pagination
     const [users, total] = await Promise.all([
       User.find(query)
-        .populate('companyId', 'name plan status')
-        .populate('assignedVehicleId', 'licensePlate make model year status currentOdometer')
-        .sort({ createdAt: -1 })
+        .populate("companyId", "name plan status")
+        .populate(
+          "assignedVehicleId",
+          "licensePlate make model year status currentOdometer"
+        )
+        // .sort({ createdAt: -1 })
+        .sort({ [sortBy]: sortOrder })
         .skip(skip)
         .limit(limit),
-      User.countDocuments(query)
+      User.countDocuments(query),
     ]);
 
     // DEBUG: Log results
-    console.log('Found users:', users.length);
-    console.log('User roles:', users.map(u => `${u.email} (${u.role})`));
+    console.log("Found users:", users.length);
+    console.log(
+      "User roles:",
+      users.map((u) => `${u.email} (${u.role})`)
+    );
 
     // Populate assigned roles for each user
     const usersWithRoles = await Promise.all(
       users.map(async (user) => {
-        const roleAssignments = await RoleAssignment.find({ userId: user._id })
-          .populate('roleId', 'name displayName description permissions');
-        
+        const roleAssignments = await RoleAssignment.find({
+          userId: user._id,
+        }).populate("roleId", "name displayName description permissions");
+
         return {
           ...user.toObject(),
-          assignedRoles: roleAssignments.map(assignment => assignment.roleId)
+          assignedRoles: roleAssignments.map((assignment) => assignment.roleId),
         };
       })
     );
@@ -267,16 +290,17 @@ router.get('/',
     res.json({
       success: true,
       data: response,
-      message: 'Users retrieved successfully'
+      message: "Users retrieved successfully",
     } as ApiResponse<PaginatedResponse<IUser>>);
   })
 );
 
 // GET /api/users/:id
 // Get single user
-router.get('/:id',
+router.get(
+  "/:id",
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'VIEWER']),
+  checkRole(["SUPER_ADMIN", "ADMIN", "MANAGER", "VIEWER"]),
   checkCompanyAccess,
   asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
@@ -285,39 +309,43 @@ router.get('/:id',
     let query: any = { _id: id };
 
     // Apply role-based access control
-    if (currentUserRole === 'ADMIN') {
+    if (currentUserRole === "ADMIN") {
       query.companyId = currentUserCompanyId;
-      query.role = 'DRIVER';
-    } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
+      query.role = "DRIVER";
+    } else if (currentUserRole === "MANAGER" || currentUserRole === "VIEWER") {
       query.companyId = currentUserCompanyId;
       // Managers and Viewers can only view drivers
-      query.role = 'DRIVER';
+      query.role = "DRIVER";
     }
 
     const user = await User.findOne(query)
-      .populate('companyId', 'name plan status')
-      .populate('assignedVehicleId', 'licensePlate make model year status currentOdometer');
-    
+      .populate("companyId", "name plan status")
+      .populate(
+        "assignedVehicleId",
+        "licensePlate make model year status currentOdometer"
+      );
+
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       } as ApiResponse);
     }
 
     res.json({
       success: true,
       data: user,
-      message: 'User retrieved successfully'
+      message: "User retrieved successfully",
     } as ApiResponse<IUser>);
   })
 );
 
 // PUT /api/users/:id
 // Update user
-router.put('/:id',
+router.put(
+  "/:id",
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  checkRole(["SUPER_ADMIN", "ADMIN"]),
   validate(updateUserSchema),
   auditUserUpdate,
   asyncHandler(async (req: any, res) => {
@@ -328,38 +356,38 @@ router.put('/:id',
     let query: any = { _id: id };
 
     // Apply role-based access control
-    if (currentUserRole === 'ADMIN') {
+    if (currentUserRole === "ADMIN") {
       query.companyId = currentUserCompanyId;
-      query.role = 'DRIVER';
-    } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
+      query.role = "DRIVER";
+    } else if (currentUserRole === "MANAGER" || currentUserRole === "VIEWER") {
       query.companyId = currentUserCompanyId;
       // Managers and Viewers can only view drivers
-      query.role = 'DRIVER';
+      query.role = "DRIVER";
     }
 
     const user = await User.findOne(query);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       } as ApiResponse);
     }
 
     // Check email uniqueness if email is being updated
     if (updateData.email && updateData.email !== user.email) {
-      const existingUser = await User.findOne({ 
+      const existingUser = await User.findOne({
         email: updateData.email.toLowerCase(),
-        _id: { $ne: id }
+        _id: { $ne: id },
       });
       if (existingUser) {
-        throw createError('Email already exists', 400);
+        throw createError("Email already exists", 400);
       }
       updateData.email = updateData.email.toLowerCase();
     }
 
     // Handle vehicle assignment changes
-    if (updateData.hasOwnProperty('assignedVehicleId')) {
+    if (updateData.hasOwnProperty("assignedVehicleId")) {
       const newVehicleId = updateData.assignedVehicleId;
       const currentVehicleId = user.assignedVehicleId?.toString();
 
@@ -367,24 +395,27 @@ router.put('/:id',
       if (newVehicleId && newVehicleId !== currentVehicleId) {
         const vehicle = await Vehicle.findOne({
           _id: newVehicleId,
-          companyId: user.companyId
+          companyId: user.companyId,
         });
-        
+
         if (!vehicle) {
-          throw createError('Vehicle not found in your company', 404);
+          throw createError("Vehicle not found in your company", 404);
         }
-        
-        if (vehicle.status === 'RETIRED') {
-          throw createError('Cannot assign retired vehicle to driver', 400);
+
+        if (vehicle.status === "RETIRED") {
+          throw createError("Cannot assign retired vehicle to driver", 400);
         }
-        
+
         // Allow multiple drivers per vehicle - just warn if already has drivers
         if (vehicle.assignedDriverIds && vehicle.assignedDriverIds.length > 0) {
           const alreadyAssigned = vehicle.assignedDriverIds.some(
-            dId => dId.toString() === id
+            (dId) => dId.toString() === id
           );
           if (!alreadyAssigned && vehicle.assignedDriverIds.length >= 5) {
-            throw createError('Vehicle already has maximum drivers assigned', 400);
+            throw createError(
+              "Vehicle already has maximum drivers assigned",
+              400
+            );
           }
         }
       }
@@ -395,17 +426,19 @@ router.put('/:id',
         const oldVehicle = await Vehicle.findById(currentVehicleId);
         if (oldVehicle) {
           // Remove from assignedDriverIds array
-          oldVehicle.assignedDriverIds = oldVehicle.assignedDriverIds?.filter(
-            dId => dId.toString() !== user._id.toString()
-          ) || [];
+          oldVehicle.assignedDriverIds =
+            oldVehicle.assignedDriverIds?.filter(
+              (dId) => dId.toString() !== user._id.toString()
+            ) || [];
           // Clear assignedDriverId if it matches
           if (oldVehicle.assignedDriverId?.toString() === user._id.toString()) {
-            oldVehicle.assignedDriverId = oldVehicle.assignedDriverIds[0] || undefined;
+            oldVehicle.assignedDriverId =
+              oldVehicle.assignedDriverIds[0] || undefined;
           }
           await oldVehicle.save();
         }
       }
-      
+
       if (newVehicleId) {
         // Set new vehicle assignment
         const newVehicle = await Vehicle.findById(newVehicleId);
@@ -414,7 +447,11 @@ router.put('/:id',
           if (!newVehicle.assignedDriverIds) {
             newVehicle.assignedDriverIds = [];
           }
-          if (!newVehicle.assignedDriverIds.some(dId => dId.toString() === user._id.toString())) {
+          if (
+            !newVehicle.assignedDriverIds.some(
+              (dId) => dId.toString() === user._id.toString()
+            )
+          ) {
             newVehicle.assignedDriverIds.push(user._id);
           }
           // Set as primary driver if no one else is assigned
@@ -432,21 +469,22 @@ router.put('/:id',
     await user.save();
 
     // Populate company info for response
-    await user.populate('companyId', 'name plan status');
+    await user.populate("companyId", "name plan status");
 
     res.json({
       success: true,
       data: user,
-      message: 'User updated successfully'
+      message: "User updated successfully",
     } as ApiResponse<IUser>);
   })
 );
 
 // DELETE /api/users/:id
 // Delete/deactivate user
-router.delete('/:id',
+router.delete(
+  "/:id",
   authenticate,
-  checkRole(['SUPER_ADMIN', 'ADMIN']),
+  checkRole(["SUPER_ADMIN", "ADMIN"]),
   auditUserDelete,
   asyncHandler(async (req: any, res) => {
     const { role: currentUserRole, companyId: currentUserCompanyId } = req.user;
@@ -455,26 +493,26 @@ router.delete('/:id',
     let query: any = { _id: id };
 
     // Apply role-based access control
-    if (currentUserRole === 'ADMIN') {
+    if (currentUserRole === "ADMIN") {
       query.companyId = currentUserCompanyId;
-      query.role = 'DRIVER';
-    } else if (currentUserRole === 'MANAGER' || currentUserRole === 'VIEWER') {
+      query.role = "DRIVER";
+    } else if (currentUserRole === "MANAGER" || currentUserRole === "VIEWER") {
       query.companyId = currentUserCompanyId;
       // Managers and Viewers can only view drivers
-      query.role = 'DRIVER';
+      query.role = "DRIVER";
     }
 
     const user = await User.findOne(query);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       } as ApiResponse);
     }
 
     // Check if hard delete is requested
-    const hardDelete = req.query.hard === 'true';
+    const hardDelete = req.query.hard === "true";
 
     if (hardDelete) {
       // Clean up related data before deleting user
@@ -496,17 +534,17 @@ router.delete('/:id',
 
       res.json({
         success: true,
-        message: 'User deleted permanently'
+        message: "User deleted permanently",
       } as ApiResponse);
     } else {
       // Soft delete - just deactivate the user
-      user.status = 'INACTIVE';
+      user.status = "INACTIVE";
       user.updatedAt = new Date();
       await user.save();
 
       res.json({
         success: true,
-        message: 'User deactivated successfully'
+        message: "User deactivated successfully",
       } as ApiResponse);
     }
   })
@@ -514,9 +552,10 @@ router.delete('/:id',
 
 // GET /api/users/:id/expenses
 // Get expenses for a specific driver (Admin only)
-router.get('/:id/expenses',
+router.get(
+  "/:id/expenses",
   authenticate,
-  checkRole(['ADMIN']),
+  checkRole(["ADMIN"]),
   validate(paginationSchema),
   asyncHandler(async (req: any, res) => {
     const { companyId } = req.user;
@@ -529,25 +568,25 @@ router.get('/:id/expenses',
     const driver = await User.findOne({
       _id: id,
       companyId,
-      role: 'DRIVER'
+      role: "DRIVER",
     });
 
     if (!driver) {
       return res.status(404).json({
         success: false,
-        message: 'Driver not found'
+        message: "Driver not found",
       } as ApiResponse);
     }
 
     // Get driver's expenses
-    const { Expense } = await import('../models');
-    
+    const { Expense } = await import("../models");
+
     const [expenses, total] = await Promise.all([
       Expense.find({ driverId: id, companyId })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
-      Expense.countDocuments({ driverId: id, companyId })
+      Expense.countDocuments({ driverId: id, companyId }),
     ]);
 
     const response: PaginatedResponse<any> = {
@@ -563,7 +602,7 @@ router.get('/:id/expenses',
     res.json({
       success: true,
       data: response,
-      message: 'Driver expenses retrieved successfully'
+      message: "Driver expenses retrieved successfully",
     } as ApiResponse);
   })
 );
